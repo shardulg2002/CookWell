@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#245845" />
+    <title>CookWell UK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="recipe.css" />
+    <link rel="stylesheet" href="onboarding.css" />
+    <link rel="stylesheet" href="improvements.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#today" aria-label="CookWell UK home"><span class="brand-mark">C</span><span>CookWell <em>UK</em></span></a>
+        <nav class="nav" aria-label="Main navigation">
+          <button class="nav-item active" data-screen="today"><span>☀</span> Today</button>
+          <button class="nav-item" data-screen="plan"><span>▦</span> Plan</button>
+          <button class="nav-item" data-screen="shop"><span>⌑</span> Shop &amp; Kitchen</button>
+          <button class="nav-item" data-screen="progress"><span>⌁</span> Progress</button>
+        </nav>
+        <div class="sidebar-note"><span class="pulse"></span><div><strong>Week one</strong><br />Small steps count.</div></div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div><p class="eyebrow" id="screen-eyebrow">Tuesday, 9 September</p><h1 id="screen-title">A good day to start.</h1></div>
+          <button class="profile-button" aria-label="Open profile"><span>AS</span><i></i></button>
+        </header>
+
+        <section class="screen active" id="today">
+          <div class="today-grid">
+            <article class="hero-card">
+              <div><p class="eyebrow light">TONIGHT'S PLAN</p><h2>Thai-style chicken<br />&amp; vegetable curry</h2><p>Cook once tonight. Enjoy it for three easy dinners.</p><div class="pill-row"><span>20 min active</span><span>£2.35 / portion</span><span>Medium spice</span></div><button class="button button-light" id="start-cooking">Start cooking <span>→</span></button></div>
+              <div class="hero-illustration" aria-hidden="true"><div class="steam s1"></div><div class="steam s2"></div><div class="steam s3"></div><div class="bowl"><div class="curry"></div></div></div>
+            </article>
+            <article class="budget-card"><div class="card-heading"><p class="eyebrow">THIS WEEK</p><button class="icon-button" id="budget-details" aria-label="Budget details" title="See budget details">›</button></div><div class="budget-number"><strong id="budget-spent">£31.60</strong><span>of £40.00</span></div><div class="progress-track"><span id="budget-bar" style="width:79%"></span></div><p id="budget-copy">£8.40 left for your plan</p><small>Includes your updated grocery prices</small></article>
+          </div>
+
+          <div class="section-heading"><div><p class="eyebrow">YOUR DAY</p><h2>Simple and sorted</h2></div><button class="text-button" data-screen-link="plan">See full week →</button></div>
+          <div class="meal-row">
+            <article class="meal-card done"><div class="meal-time">BREAKFAST <span>✓</span></div><div class="meal-icon yellow">◒</div><h3>Eggs, toast &amp; spinach</h3><p>7 min · 24g protein</p></article>
+            <article class="meal-card"><div class="meal-time">LUNCH</div><div class="meal-icon coral">◉</div><h3>Curry leftovers</h3><p>Ready in 3 min · 31g protein</p></article>
+            <article class="meal-card"><div class="meal-time">SNACK</div><div class="meal-icon yellow">◍</div><h3>Greek yoghurt &amp; berries</h3><p>2 min · 14g protein</p></article>
+            <article class="meal-card featured"><div class="meal-time">DINNER</div><div class="meal-icon green">◌</div><h3>Cook your batch curry</h3><p>20 min active · 4 portions</p><button class="tiny-button" id="cook-card">Cook now →</button></article>
+          </div>
+
+          <div class="lower-grid">
+            <article class="card use-soon"><div class="card-heading"><div><p class="eyebrow">USE SOON</p><h3>Make the most of these</h3></div><span class="round-count">3</span></div><div class="use-item"><span class="food-dot tomato"></span><div><strong>Cherry tomatoes</strong><small>Best before tomorrow</small></div><button class="text-button">Use →</button></div><div class="use-item"><span class="food-dot leaf"></span><div><strong>Baby spinach</strong><small>Best before tomorrow</small></div><button class="text-button">Use →</button></div></article>
+            <article class="card quick-log"><p class="eyebrow">QUICK LOG</p><h3>How are you doing?</h3><p>A small check-in helps you spot your own patterns.</p><div class="quick-actions"><button data-log="glucose">＋ Glucose</button><button data-log="weight">＋ Weight</button><button data-log="steps">＋ Steps</button></div></article>
+          </div>
+        </section>
+
+        <section class="screen" id="plan">
+          <div class="plan-summary"><div><p class="eyebrow" id="plan-week-label">9–15 SEPTEMBER</p><h2 id="plan-title">Your first balanced week</h2><p id="plan-subtitle">Breakfast, lunch, snack and dinner—two easy cook sessions and one discovery meal.</p></div><div class="plan-stats"><span><strong>2</strong> batch cooks</span><span><strong>1</strong> discovery meal</span><span><strong>£31.60</strong> estimated</span></div></div>
+          <div class="week-grid" id="week-grid"></div>
+          <div class="discovery-card"><div class="compass">✦</div><div><p class="eyebrow">DISCOVERY MEAL</p><h3>Try something new, gently</h3><p>This week: a one-pan Mediterranean chicken with lemon, chickpeas and greens. You can swap it anytime.</p></div><button class="button button-outline" id="swap-discovery">Swap meal</button></div>
+          <div class="next-week-card"><div><p class="eyebrow">NEXT WEEK</p><h3>Plan with your kitchen, not against it</h3><p id="inventory-plan-copy">You have brown rice, Greek yoghurt and chilli flakes left. We will use them before adding new ingredients.</p></div><button class="button button-dark" id="build-next-week">Build next week →</button></div>
+        </section>
+
+        <section class="screen" id="shop">
+          <div class="shop-header"><div><p class="eyebrow">THIS WEEK'S SHOP</p><h2>Buy only what your plan needs</h2><p>Tick something off to add it to your kitchen.</p></div><div class="shop-total"><span>ESTIMATED TOTAL</span><strong id="shop-total">£31.60</strong></div></div>
+          <div class="shop-tabs"><button class="tab active" data-tab="list">Grocery list <span id="checked-count">0 / 13</span></button><button class="tab" data-tab="inventory">My kitchen <span>5 items</span></button></div>
+          <div id="list-panel" class="shop-panel active"><div id="grocery-list"></div></div>
+          <div id="inventory-panel" class="shop-panel"><div class="inventory-grid"><article><span class="food-dot grain"></span><div><strong>Brown rice</strong><small>500g · Cupboard</small></div><button>Used in plan</button></article><article><span class="food-dot leaf"></span><div><strong>Baby spinach</strong><small>120g · Use tomorrow</small></div><button>Use soon</button></article><article><span class="food-dot tomato"></span><div><strong>Cherry tomatoes</strong><small>250g · Use tomorrow</small></div><button>Use soon</button></article><article><span class="food-dot dairy"></span><div><strong>Greek yoghurt</strong><small>400g · Fridge</small></div><button>Used in plan</button></article><article><span class="food-dot spice"></span><div><strong>Chilli flakes</strong><small>Pantry staple</small></div><button>Available</button></article></div></div>
+        </section>
+
+        <section class="screen" id="progress">
+          <div class="progress-header"><div><p class="eyebrow">YOUR PROGRESS</p><h2>Look for trends, not perfection</h2><p>Everything here is private to you and easy to edit.</p></div><button class="button button-dark" id="open-log">Log today</button></div>
+          <div class="metric-grid"><article><p>WEIGHT</p><h3>89.5 <span>kg</span></h3><small class="positive">↓ 0.3 kg in 14 days</small></article><article><p>STEPS</p><h3>6,240</h3><small>Today · goal 7,000</small></article><article><p>GLUCOSE LOGS</p><h3 id="glucose-count">0</h3><small>This week · manual entries</small></article><article><p>HOME-COOKED</p><h3>6 <span>meals</span></h3><small class="positive">On your plan this week</small></article></div>
+          <div class="chart-grid"><article class="card chart-card"><div class="card-heading"><div><p class="eyebrow">WEIGHT TREND</p><h3>Slowly, steadily</h3></div><span class="chart-label">14 days</span></div><svg viewBox="0 0 440 150" preserveAspectRatio="none" aria-label="Weight is trending down gradually"><path class="area" d="M0,34 C50,38 58,24 102,48 S166,42 210,68 S294,72 340,95 S396,96 440,118 L440,150 L0,150Z"/><path class="line" d="M0,34 C50,38 58,24 102,48 S166,42 210,68 S294,72 340,95 S396,96 440,118"/></svg><div class="chart-axis"><span>26 Aug</span><span>9 Sep</span></div></article><article class="card insight-card"><p class="eyebrow">THIS WEEK'S FOCUS</p><h3>Cook twice, then make it easy.</h3><p>Your batch meals are planned for Tuesday and Friday. A 10-minute walk after dinner is a nice optional win.</p><div class="focus-check">✓ Plan created</div><div class="focus-check muted">○ Cook first batch meal</div></article></div>
+          <article class="card glucose-card"><div><p class="eyebrow">GLUCOSE</p><h3 id="glucose-title">No readings yet this week</h3><p id="glucose-copy">Log readings with their units and timing. Your app will show trends, not medical instructions.</p></div><button class="button button-outline" data-log="glucose">Add reading</button></article>
+        </section>
+      </main>
+      <nav class="mobile-nav" aria-label="Main navigation"><button class="active" data-screen="today">☀<span>Today</span></button><button data-screen="plan">▦<span>Plan</span></button><button data-screen="shop">⌑<span>Shop</span></button><button data-screen="progress">⌁<span>Progress</span></button></nav>
+    </div>
+
+    <dialog id="onboarding-dialog"><form method="dialog" id="onboarding-form"><button class="modal-close" value="cancel" aria-label="Close">×</button><div class="onboarding-progress"><span class="active"></span><span></span><span></span></div><section class="onboard-step active" data-onboarding-step="1"><p class="eyebrow">LET'S MAKE THIS YOURS</p><h2>How will you cook?</h2><p>We use this to make a realistic plan—not an idealised one.</p><label>Your name<input id="onboard-name" placeholder="What should we call you?" /></label><label>Weekly grocery budget<input id="onboard-budget" type="number" min="1" value="40" inputmode="decimal" /></label><label>How many nights will you cook a batch meal?<select id="onboard-batch"><option value="2">Two nights a week</option><option value="1">One night a week</option><option value="3">Three nights a week</option></select></label></section><section class="onboard-step" data-onboarding-step="2"><p class="eyebrow">YOUR KITCHEN</p><h2>What equipment do you have?</h2><p>We will only suggest recipes you can actually make.</p><div class="equipment-grid"><label><input type="checkbox" value="Induction hob" checked /> Induction hob</label><label><input type="checkbox" value="Oven" checked /> Oven</label><label><input type="checkbox" value="Microwave" checked /> Microwave</label><label><input type="checkbox" value="Fridge/freezer" checked /> Fridge/freezer</label><label><input type="checkbox" value="Air fryer" /> Air fryer</label><label><input type="checkbox" value="Rice cooker" /> Rice cooker</label><label><input type="checkbox" value="Blender" /> Blender</label><label><input type="checkbox" value="Kitchen scales" /> Kitchen scales</label></div></section><section class="onboard-step" data-onboarding-step="3"><p class="eyebrow">TASTE &amp; RHYTHM</p><h2>What should we learn first?</h2><p>These are soft signals. Your plan will include variety and learn from your feedback.</p><label>Foods or ingredients to avoid<input id="onboard-dislikes" placeholder="e.g. plain milk, mushrooms" /></label><label>Things you enjoy (optional)<input id="onboard-likes" placeholder="e.g. spicy food, chicken, Thai" /></label><label>How adventurous should next week feel?<select id="onboard-exploration"><option value="one">One discovery meal</option><option value="two">Two discovery meals</option><option value="none">Keep it familiar for now</option></select></label></section><div class="onboarding-actions"><button class="button button-outline" type="button" id="onboard-back">Back</button><button class="button button-dark" type="button" id="onboard-next">Continue →</button><button class="button button-dark" type="submit" id="onboard-finish">Create my plan →</button></div></form></dialog>
+    <dialog id="log-dialog"><form method="dialog" id="log-form"><button class="modal-close" value="cancel" aria-label="Close">×</button><p class="eyebrow" id="log-kind">QUICK LOG</p><h2 id="log-heading">Log today</h2><p id="log-description">Small data points build a useful picture over time.</p><label>Value <div class="input-row"><input id="log-value" inputmode="decimal" required /><select id="log-unit"></select></div></label><label id="timing-label">When was this?<select id="log-timing"><option>Before meal</option><option>After meal</option><option>Other</option></select></label><label>Optional note<input id="log-note" placeholder="e.g. after dinner" /></label><button class="button button-dark" id="save-log" value="default">Save entry</button><small class="safety-note" id="safety-note">This supports your self-tracking and does not provide medical advice.</small></form></dialog>
+    <dialog id="recipe-dialog"><form method="dialog"><button class="modal-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">BATCH RECIPE · 4 PORTIONS</p><h2>Thai-style chicken &amp; vegetable curry</h2><p class="recipe-intro">All ingredient amounts are for four portions. Weigh ingredients before cooking for the most accurate calories.</p><div class="recipe-meta"><span>20 min active</span><span>35 min total</span><span>£2.35 / portion</span></div><div class="nutrition-row"><div><strong>506</strong><span>kcal</span></div><div><strong>35g</strong><span>protein</span></div><div><strong>48g</strong><span>carbs</span></div><div><strong>8g</strong><span>fibre</span></div></div><h3 class="dialog-section-heading">Ingredients — weigh these</h3><ul class="ingredient-list"><li><span>500 g</span>boneless chicken thighs, raw</li><li><span>240 g</span>brown rice, dry</li><li><span>500 ml</span>water for the rice</li><li><span>15 ml</span>olive oil</li><li><span>150 g</span>onion, diced</li><li><span>300 g</span>bell peppers, sliced</li><li><span>30 g</span>Thai red curry paste</li><li><span>400 ml</span>light coconut milk</li><li><span>300 g</span>frozen mixed vegetables</li><li><span>100 g</span>baby spinach</li></ul><button class="button button-dark" id="start-guided" value="default">Start guided cooking →</button></form></dialog>
+    <dialog id="cook-dialog"><form method="dialog"><button class="modal-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">COOK MODE · STEP <span id="step-number">1</span> OF 5</p><h2 id="cook-step">Add 240 g brown rice and 500 ml water to a saucepan.</h2><p id="cook-tip">Use a measuring jug for liquids and kitchen scales for grams.</p><div class="timer-pill">◷ <span id="timer">25:00</span></div><div class="measurement-callout"><span>USE NOW</span><strong id="step-amount">240 g brown rice + 500 ml water</strong></div><div class="modal-actions"><button class="button button-outline" id="previous-step" type="button">Back</button><button class="button button-dark" id="next-step" type="button">Next step →</button></div></form></dialog>
+    <dialog id="budget-dialog"><form method="dialog"><button class="modal-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">WEEKLY FOOD BUDGET</p><h2>Your £40 plan</h2><div class="budget-breakdown"><div><span>Planned groceries</span><strong id="budget-dialog-spent">£31.60</strong></div><div><span>Flexible buffer</span><strong id="budget-dialog-left">£8.40</strong></div><div><span>Eating out</span><strong>Not included</strong></div></div><p class="recipe-intro">Prices are editable in Shop &amp; Kitchen. Your total updates immediately when you enter what you actually paid.</p><button class="button button-dark" id="open-shop-from-budget" value="default">Edit grocery prices</button></form></dialog>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
