@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+ <rect width="900" height="500" fill="white"/>
+ <g fill="black" font-family="Arial, sans-serif" font-size="42">
+  <text x="60" y="80">FICTIONAL TEST RECEIPT</text>
+  <text x="60" y="180">OATS</text><text x="670" y="180">1.25</text>
+  <text x="60" y="260">CHICKPEAS</text><text x="670" y="260">3.00</text>
+  <text x="60" y="360">TOTAL</text><text x="670" y="360">4.25</text>
+ </g>
+</svg>

@@ -13,6 +13,7 @@ import {
   recommend,
   number,
 } from "../lib/domain.mjs";
+import { lookupProduct } from "../lib/product-lookup.mjs";
 const reject = (message, status = 400) => {
   throw Object.assign(new Error(message), { status });
 };
@@ -200,6 +201,17 @@ export default async function handler(req, res) {
         };
       }
       if (req.method !== "POST") reject("POST required.", 405);
+      if (action === "barcode") {
+        if (data.consent !== true)
+          reject("Confirm barcode-only lookup before continuing.");
+        account.lookups = (account.lookups || []).filter(
+          (t) => t > Date.now() - 60000,
+        );
+        if (account.lookups.length >= 20)
+          reject("Too many lookups. Wait a minute and try again.", 429);
+        account.lookups.push(Date.now());
+        return { account, result: await lookupProduct(data.code) };
+      }
       if (action === "recommend") {
         if (!account.state.profile) reject("Complete onboarding.");
         return {

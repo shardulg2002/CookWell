@@ -1,4 +1,8 @@
 import { dayKey, weightReference } from "./metrics.js";
+import { createFeatures } from "./features.js";
+import { yieldInfo, portionDescription } from "./portions.js";
+import { reviewSummary } from "./review.js";
+import { parseReceipt, suggestIngredient, validBarcode } from "./imports.js";
 import { dailyCard, weightCard } from "./wellbeing.js";
 import { instructionList, techniqueVisual, stepAmounts } from "./cooking.js";
 const $ = (s) => document.querySelector(s);
@@ -157,6 +161,21 @@ const field = (label, name, type = "text", value = "", attrs = "") =>
   `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;
 const select = (label, name, values, current) =>
   `<label>${label}<select name="${name}">${options(values, current)}</select></label>`;
+const features = createFeatures({
+  getState: () => state,
+  chosenPlan,
+  mealInfo,
+  modal,
+  mutate,
+  api,
+  esc,
+  field,
+  select,
+  btn,
+  cash,
+  toast,
+  openMeal,
+});
 function renderOnboarding() {
   const p = state.profile || {},
     t = p.targets || {};
@@ -352,6 +371,7 @@ function render() {
   const p = state.profile;
   $("#app").innerHTML =
     `<div class="app-shell"><aside class="sidebar"><a class="brand" href="/"><img src="/icon.svg" alt="">CookWell</a><nav>${navs.map(([id, icon, label]) => `<button class="nav ${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav><div class="sidebar-foot"><strong>A little better, every day.</strong>One meal, one shop, one small step at a time.</div></aside><main class="main"><header class="topbar"><div><p class="eyebrow">${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p><h1>${{ today: `Welcome back, ${esc(p.name)}.`, plan: "A week that works for you.", kitchen: "A little less waste.", recipes: "Find your next favourite.", progress: "Your own pace. Your progress.", settings: "Make yourself at home." }[screen]}</h1></div><button class="profile" data-action="nav" data-screen="settings" aria-label="Settings">${esc(p.name.slice(0, 2).toUpperCase())}</button></header><div id="screen">${{ today: renderToday, plan: renderPlan, kitchen: renderKitchen, recipes: renderRecipes, progress: renderProgress, settings: renderSettings }[screen]()}</div></main><nav class="mobile-nav" aria-label="Main navigation">${navs.map(([id, icon, label]) => `<button class="${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav></div>`;
+  $("#screen").insertAdjacentHTML("afterbegin", features.tools(screen));
 }
 function totals(plan) {
   const rows = plan?.shopping || [],
@@ -448,7 +468,7 @@ function renderKitchen() {
       .filter((b) => b.remaining > 0)
       .map(
         (b) =>
-          `<article class="inventory-item"><h3>${esc(catalog()[b.recipeId].title)}</h3><small>${b.remaining} portions · ${b.location} · use by ${b.safeUntil ? new Date(b.safeUntil).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" }) + " UK" : b.expires}</small><div class="row">${btn(b.location === "freezer" ? "Confirm defrosted" : "Freeze", "batch", `data-id="${b.id}" data-op="${b.location === "freezer" ? "thaw" : "freeze"}"`, "soft")}${btn("Use in plan", "use-batch-dialog", `data-id="${b.id}"`, "outline")}${btn("Record waste", "batch", `data-id="${b.id}" data-op="waste"`, "outline")}</div></article>`,
+          `<article class="inventory-item"><h3>${esc(catalog()[b.recipeId].title)}</h3><small>${b.remaining} portions · ${b.location} · use by ${b.safeUntil ? new Date(b.safeUntil).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" }) + " UK" : b.expires}</small><small>${portionDescription(b)}</small><div class="row">${btn("Record batch weight", "batch-weight", `data-id="${b.id}"`, "outline")}${btn(b.location === "freezer" ? "Confirm defrosted" : "Freeze", "batch", `data-id="${b.id}" data-op="${b.location === "freezer" ? "thaw" : "freeze"}"`, "soft")}${btn("Use in plan", "use-batch-dialog", `data-id="${b.id}"`, "outline")}${btn("Record waste", "batch", `data-id="${b.id}" data-op="waste"`, "outline")}</div></article>`,
       )
       .join("") || '<p class="muted">Prepared meals will appear here.</p>'
   }</section></div>`;
@@ -558,7 +578,7 @@ async function openRecipe(id, mult = 1, meal = null) {
   const info = meal ? mealInfo(meal.id) : {},
     b = info.batch;
   modal(
-    `<p class="eyebrow">${esc(r.cuisine)} · ${r.active} MIN ACTIVE</p><h2>${esc(r.title)}</h2><p class="intro">${meal ? "Quantities below cover this meal or its entire batch." : "Base serving; add through a meal swap to put this recipe on your plan."} All nutrition is estimated from ingredient quantities.</p>${nutrition(r.nutrition)}<p class="hint">${meal && mult !== meal.multiplier ? "Nutrition shown for the whole batch. Each planned portion has its own allocation." : "Nutrition shown for the displayed quantities."}</p><h3 class="section">Exactly what to use</h3>${r.ingredients.map((i) => `<div class="ingredient"><strong>${i.quantity} ${i.unit}</strong><div>${esc(i.name)}<small class="source">${esc(i.nutritionSource)}</small></div></div>`).join("")}<div class="row section">${btn("Start step-by-step cooking →", "guided")}</div><details><summary>Read all cooking steps</summary><ol class="step-list">${r.steps.map((st) => `<li><h3>${esc(st.title)}</h3>${instructionList(st.text)}</li>`).join("")}</ol></details><div class="row section">${btn("Guided cooking →", "guided")}${meal && !b && meal.status === "planned" ? btn("Mark prepared", "prepare", `data-id="${meal.id}"`, "outline") : ""}${meal && b && meal.status !== "eaten" ? btn("Mark this portion eaten", "eat", `data-id="${meal.id}"`) : ""}${btn("Rate this recipe", "feedback", `data-id="${r.id}"`, "outline")}</div>${meal ? `<div class="row section">${btn("Eating out instead", "meal-status", `data-id="${meal.id}" data-status="out"`, "soft")}${btn("Skip this meal", "meal-status", `data-id="${meal.id}" data-status="skipped"`, "soft")}${meal.status === "out" || meal.status === "skipped" ? btn("Restore meal", "meal-status", `data-id="${meal.id}" data-status="planned"`, "outline") : ""}</div>` : ""}`,
+    `<p class="eyebrow">${esc(r.cuisine)} · ${r.active} MIN ACTIVE</p><h2>${esc(r.title)}</h2><p class="intro">${meal ? "Quantities below cover this meal or its entire batch." : "Base serving; add through a meal swap to put this recipe on your plan."} All nutrition is estimated from ingredient quantities.</p>${meal ? features.batchSummary(meal) : ""}${nutrition(r.nutrition)}<p class="hint">${meal && mult !== meal.multiplier ? "Nutrition shown for the whole batch. Each planned portion has its own allocation." : "Nutrition shown for the displayed quantities."}</p><h3 class="section">Exactly what to use</h3>${r.ingredients.map((i) => `<div class="ingredient"><strong>${i.quantity} ${i.unit}</strong><div>${esc(i.name)}<small class="source">${esc(i.nutritionSource)}</small></div></div>`).join("")}<div class="row section">${btn("Start step-by-step cooking →", "guided")}</div><details><summary>Read all cooking steps</summary><ol class="step-list">${r.steps.map((st) => `<li><h3>${esc(st.title)}</h3>${instructionList(st.text)}</li>`).join("")}</ol></details><div class="row section">${btn("Guided cooking →", "guided")}${meal && !b && meal.status === "planned" ? btn("Mark prepared", "prepare", `data-id="${meal.id}"`, "outline") : ""}${meal && b && meal.status !== "eaten" ? btn("Mark this portion eaten", "eat", `data-id="${meal.id}"`) : ""}${btn("Rate this recipe", "feedback", `data-id="${r.id}"`, "outline")}</div>${meal ? `<div class="row section">${btn("Eating out instead", "meal-status", `data-id="${meal.id}" data-status="out"`, "soft")}${btn("Skip this meal", "meal-status", `data-id="${meal.id}" data-status="skipped"`, "soft")}${meal.status === "out" || meal.status === "skipped" ? btn("Restore meal", "meal-status", `data-id="${meal.id}" data-status="planned"`, "outline") : ""}</div>` : ""}`,
   );
 }
 async function openMeal(id) {
@@ -570,12 +590,7 @@ async function openMeal(id) {
     );
     return;
   }
-  const mult = batch
-    ? m.multiplier
-    : p.meals
-        .filter((x) => x.id === m.id || x.parentId === m.id)
-        .filter((x) => x.status === "planned")
-        .reduce((n, x) => n + x.multiplier, 0) || m.multiplier;
+  const mult = batch ? m.multiplier : yieldInfo(p, m).multiplier;
   await openRecipe(m.recipeId, mult, m);
 }
 function guided() {
@@ -747,6 +762,7 @@ document.addEventListener("click", async (e) => {
     id = b.dataset.id;
   e.preventDefault();
   try {
+    if (await features.click(a, id, b)) return;
     if (a === "auth-mode") {
       authMode = b.dataset.mode;
       renderAuth();
@@ -795,27 +811,6 @@ document.addEventListener("click", async (e) => {
       toast("Week confirmed.");
     }
     if (a === "stock") stockDialog(id);
-    if (a === "use-batch-dialog") {
-      const batch = state.batches.find((b) => b.id === id),
-        r = catalog()[batch.recipeId];
-      modal(
-        `<h2>Use a cooked portion.</h2><p class="intro">Choose an uneaten meal. Already allocated portions cannot be double-booked. Frozen portions need defrosting before eating.</p><div class="stack">${chosenPlan()
-          .meals.filter(
-            (m) => m.status === "planned" && r.slots.includes(m.slot),
-          )
-          .map((m) =>
-            btn(
-              dateLabel(m.date) + " · " + slotNames[m.slot],
-              "use-batch",
-              `data-id="${m.id}" data-batch="${id}"`,
-              "outline",
-            ),
-          )
-          .join("")}</div>`,
-      );
-    }
-    if (a === "use-batch")
-      await mutate("useBatch", { id, batchId: b.dataset.batch });
     if (a === "price") priceDialog(id);
     if (a === "purchase") purchaseDialog(id);
     if (a === "nutrition-edit") {
@@ -878,24 +873,7 @@ document.addEventListener("click", async (e) => {
       stopTimer();
     }
     if (a === "prepare") prepareDialog(id);
-    if (a === "eat") {
-      if (await mutate("eat", { id }))
-        toast("Meal recorded. Your eaten nutrition and portions are updated.");
-    }
-    if (a === "batch") {
-      if (b.dataset.op === "waste") {
-        modal(
-          `<h2>Record unused portions.</h2><form id="waste-form" data-id="${id}">${field("Portions to discard", "portions", "number", 1, 'required min="1" step="1"')}<button class="btn danger">Record waste</button></form>`,
-        );
-      } else if (b.dataset.op === "thaw") {
-        modal(
-          `<h2>Is the food fully defrosted?</h2><p class="intro">Defrost in the fridge, not on the counter. Confirm only when completely thawed. Use within 24 hours, reheat only once, and check it is steaming hot throughout.</p>${btn("Confirm fully defrosted", "confirm-thaw", `data-id="${id}"`)}`,
-        );
-      } else if (await mutate("batch", { id, operation: b.dataset.op }))
-        toast("Storage updated.");
-    }
-    if (a === "confirm-thaw")
-      await mutate("batch", { id, operation: "thaw", confirmed: true });
+
     if (a === "feedback") {
       modal(
         `<p class="eyebrow">HELP YOUR PLAN LEARN</p><h2>Would you make it again?</h2><form id="feedback-form" data-id="${id}">${select(
@@ -942,19 +920,7 @@ document.addEventListener("click", async (e) => {
   }
 });
 function prepareDialog(id) {
-  const { m, p, batch } = mealInfo(id);
-  if (batch) {
-    modal(
-      `<h2>Your batch is already prepared.</h2><p class="intro">${batch.remaining} portions in the ${batch.location}. Use Kitchen to defrost or adjust storage.</p>${btn("Record this portion eaten", "eat", `data-id="${id}"`)}`,
-    );
-    return;
-  }
-  const count = p.meals
-    .filter((x) => x.id === m.id || x.parentId === m.id)
-    .filter((x) => x.status === "planned").length;
-  modal(
-    `<p class="eyebrow">FINISH COOKING</p><h2>${count} portion${count === 1 ? "" : "s"} ready.</h2><p class="intro">Confirm only after preparing the exact batch quantities. Ingredients will be deducted once. Rice needs eating within 24 hours in the fridge; other cooked meals within 48 hours. Freeze later portions promptly.</p><form id="prepare-form" data-id="${id}"><label class="check-label"><input type="checkbox" name="freeze" ${state.profile.equipment.includes("freezer") ? "" : "disabled"}>Freeze the whole batch for later</label><button class="btn">Confirm prepared</button></form>`,
-  );
+  features.prepare(id);
 }
 document.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -964,6 +930,7 @@ document.addEventListener("submit", async (e) => {
   const submit = f.querySelector("button[type=submit],button:not([type])");
   if (submit) submit.disabled = true;
   try {
+    if (await features.submit(f, d)) return;
     if (f.id === "auth-form") {
       const result = await api(authMode, d);
       state = result.state;
@@ -979,7 +946,13 @@ document.addEventListener("submit", async (e) => {
     if (f.id === "purchase-form")
       await mutate("purchase", { ...d, id, planId: chosenPlan().id });
     if (f.id === "prepare-form") {
-      if (await mutate("cook", { id, freeze: d.freeze === "on" }))
+      if (
+        await mutate("cook", {
+          id,
+          freeze: d.freeze === "on",
+          cookedWeight: d.cookedWeight,
+        })
+      )
         toast("Prepared. Ingredients deducted and portions saved.");
     }
     if (f.id === "waste-form")
@@ -1008,6 +981,8 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", (e) => {
+  features.input(e.target);
+  features.capture(e.target).catch(showError);
   if (e.target.id === "intake-date") {
     intakeDate = e.target.value || localDay();
     render();
@@ -1021,6 +996,7 @@ document.addEventListener("change", (e) => {
   if (e.target.closest("#onboarding-form")) updateEstimate();
 });
 document.addEventListener("input", (e) => {
+  features.input(e.target);
   if (e.target.closest("#onboarding-form")) updateEstimate();
 });
 $("#dialog").addEventListener("close", stopTimer);

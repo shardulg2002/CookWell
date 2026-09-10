@@ -7,12 +7,19 @@
     "node": ">=22"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "predev": "node scripts/build.mjs",
     "dev": "node --env-file-if-exists=.env server.mjs",
     "start": "node --env-file-if-exists=.env server.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
+    "esbuild": "^0.28.2",
+    "pg": "^8.16.3",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "prettier": "^3.9.6"

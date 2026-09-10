@@ -1,4 +1,4 @@
-# Implementation notes — 10 September 2026
+# Implementation notes — 11 September 2026
 
 ## Underlying use case
 
@@ -17,19 +17,26 @@ The original prompt and PRODUCT_MVP.md remain the starting point. Current decisi
 
 ## Verification
 
-The automated suite currently contains 23 passing tests. Browser verification has covered fresh onboarding, empty equipment selection, generated meals, budget details and guided recipe screens. A fictitious local browser-testing account was used; it is not a user profile template.
+All 34 automated tests pass. They cover the original workflows plus custom batch yields, split-lot reservations, fractional eating/waste, cooked-weight conversion, legacy batches, review-driven draft regeneration, receipt parsing, barcode validation and confirmed purchase imports. An authenticated API journey verifies persistence across a server restart. Tests use isolated temporary account stores, not the user's live data.
+
+Browser checks verified batch-yield screens, the live grams-per-serving calculation, weekly review controls, receipt-text review, and on-device OCR of a fictional receipt image. A live Open Food Facts lookup succeeded for a public example barcode. Barcode-photo decoding, real supermarket receipts and iPhone camera formats still need broader device testing. The user's saved stock and health records were not modified by the browser checks.
 
 The PostgreSQL implementation and Vercel configuration exist, but no hosted database or deployment was available for verification. Use the deployment checklist in README before entering personal health data online.
+
+## Completed follow-up features
+
+- One batch explicitly yields N servings. Yield changes scale the recipe and shopping list. Extra servings become unallocated cooked stock. Net cooked batch weight gives grams per serving; it is optional and can be recorded later.
+- A meal can be eaten in portions or grams. Nutrition is scaled from the saved cooking-time nutrition snapshot. Unconsumed fractions are released for reuse. Fridge/freezer lots retain their origin, serving weight and use-by metadata, including across fractional splits.
+- Weekly reviews are editable and keep explicit recipe ratings. Effort and hunger influence recipe ranking, with optional budget or discovery priorities. Enjoyment and free text are stored for reflection, not presented as AI interpretation. Regeneration only replaces a draft with no purchases, cooked or eaten meals, and requires an explicit checkbox.
+- Receipt photos are processed locally; users can also paste receipt text. Rows are never selected by default. Every included row needs an ingredient match, edible pack quantity and actual line price. Validation precedes all stock/spending writes, and import IDs prevent repeat submission.
+- Barcode photos are decoded locally; external lookup requires barcode-only consent. Returned nutrition is nullable and is applied only after explicit label verification. No receipt photo or text is sent to the server. The free Open Food Facts lookup is not a retailer price feed.
 
 ## Candidate next features
 
 Prioritise these after real kitchen testing, not all at once:
 
-1. Partial servings and batch splitting: accurately record eating half a portion and freeze only the later portions.
-2. A short weekly review: meals enjoyed, cooking effort, hunger/fullness, waste and grocery spend. Use explicit feedback to improve the next draft.
-3. Receipt/barcode-assisted entry: reduce stock and price bookkeeping, with a confirmation screen before saving.
-4. A beginner techniques collection: verified short videos for chopping, pan heat, doneness, cooling and reheating. Label illustrative images; never use a photo as proof food is safely cooked.
-5. Meal-linked glucose context: connect before/after readings with the actual meal and timing, without claiming that a single meal caused a change.
-6. A clinician-friendly progress export with units, timing and missing-data warnings.
+1. A beginner techniques collection: verified short videos for chopping, pan heat, doneness, cooling and reheating. Label illustrative images; never use a photo as proof food is safely cooked.
+2. Meal-linked glucose context: connect before/after readings with the actual meal and timing, without claiming that a single meal caused a change.
+3. A clinician-friendly progress export with units, timing and missing-data warnings.
 
 Photos of the actual tested recipes would be more useful than decorative stock imagery. This build has simple diagrams and linked technique help, not a complete photo/video recipe library.

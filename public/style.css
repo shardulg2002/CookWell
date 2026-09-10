@@ -1188,6 +1188,28 @@ details[open] {
   width: 100%;
   height: 110px;
 }
+.import-row {
+  border: 1px solid #dce0d1;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+.import-row legend {
+  font-weight: 700;
+  padding: 0 6px;
+  overflow-wrap: anywhere;
+}
+textarea {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  border: 1px solid #dce0d1;
+  border-radius: 8px;
+}
+#dialog form .hint,
+#dialog form .notice {
+  margin: 12px 0;
+}
 .step-progress {
   display: flex;
   gap: 4px;

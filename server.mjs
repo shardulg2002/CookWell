@@ -4,6 +4,8 @@ import path from "node:path";
 import handler from "./api/index.js";
 const root = path.resolve("public");
 const types = {
+  ".wasm":"application/wasm",
+  ".gz":"application/gzip",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript",
   ".css": "text/css",

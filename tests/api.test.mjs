@@ -41,6 +41,132 @@ async function call(action, data, cookie, extra = {}) {
     cookie: res.headers.get("set-cookie")?.split(";")[0],
   };
 }
+test("new feature API journey persists imports, split lots, grams eaten and review", async () => {
+  await start();
+  try {
+    assert.equal(
+      (await call("barcode", { code: "3017620422003", consent: true })).status,
+      401,
+    );
+    const account = await call("register", {
+        email: "new-features@example.test",
+        password: "fictional-password-123",
+      }),
+      cookie = account.cookie;
+    let state = account.body.state;
+    const act = async (action, data) => {
+      const r = await call(
+        "mutate",
+        { revision: state.revision, action, data },
+        cookie,
+      );
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      state = r.body.state;
+      return state;
+    };
+    await act("profile", {
+      name: "Feature test",
+      age: 24,
+      height: 175,
+      weight: 89.5,
+      equationSex: "male",
+      activity: 1.375,
+      goal: "lose",
+      budget: 40,
+      equipment: ["hob", "oven", "fridge", "freezer"],
+      allergens: [],
+      avoid: [],
+      diet: "omnivore",
+      likes: "",
+      cooking: "batch",
+      activeLimit: 20,
+      explore: 1,
+      glucoseUnit: "mg/dL",
+      startDate: new Date().toISOString().slice(0, 10),
+    });
+    assert.equal(
+      (await call("barcode", { code: "3017620422003", consent: false }, cookie))
+        .status,
+      400,
+    );
+    assert.equal(
+      (await call("barcode", { code: "invalid", consent: true }, cookie))
+        .status,
+      400,
+    );
+    const p = state.plans[0],
+      m = p.meals.find(
+        (m) => !m.parentId && p.meals.some((c) => c.parentId === m.id),
+      );
+    await act("batchSize", { id: m.id, portions: 6 });
+    const r = await call(
+      "recipe&id=" + m.recipeId + "&multiplier=" + 6 * m.multiplier,
+      null,
+      cookie,
+    );
+    assert.equal(r.status, 200);
+    await act("importPurchases", {
+      confirmed: true,
+      importId: "api-confirmed-import-12345",
+      planId: p.id,
+      retailer: "Fictional receipt",
+      date: new Date().toISOString().slice(0, 10),
+      rows: r.body.ingredients.map((i) => ({
+        ingredientId: i.id,
+        packs: 1,
+        pack: i.quantity,
+        total: 1,
+        location: "cupboard",
+      })),
+    });
+    const savedSpend = state.purchases.reduce((n, p) => n + p.cost, 0);
+    const duplicate = await call(
+      "mutate",
+      {
+        revision: state.revision,
+        action: "importPurchases",
+        data: { confirmed: true, importId: "api-confirmed-import-12345" },
+      },
+      cookie,
+    );
+    assert.equal(duplicate.status, 400);
+    await act("cook", { id: m.id, cookedWeight: 2400 });
+    const b = state.batches[0];
+    await act("batch", { id: b.id, operation: "freeze", portions: 2 });
+    await act("eat", { id: m.id, basis: "grams", amount: 200 });
+    assert.equal(
+      state.plans[0].meals.find((x) => x.id === m.id).eatenPortions,
+      0.5,
+    );
+    await act("review", {
+      planId: p.id,
+      hunger: 3,
+      enjoyment: 4,
+      effort: 2,
+      priority: "variety",
+      refreshDraft: true,
+    });
+    await stop();
+    await start();
+    state = (await call("state", null, cookie)).body.state;
+    assert.equal(
+      state.batches.find((x) => x.location === "freezer").remaining,
+      2,
+    );
+    assert.equal(state.reviews.length, 1);
+    assert.equal(state.imports.length, 1);
+    assert.equal(
+      state.purchases.reduce((n, p) => n + p.cost, 0),
+      savedSpend,
+    );
+    const asset = await fetch("http://127.0.0.1:4181/features.js");
+    assert.equal(asset.status, 200);
+    assert.match(asset.headers.get("content-type"), /javascript/);
+  } finally {
+    await stop();
+  }
+});
+
 test("persistent authenticated journey, isolation, stale writes and recovery", async () => {
   await start();
   try {

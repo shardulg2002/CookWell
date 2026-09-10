@@ -29,7 +29,10 @@ Tests cover onboarding, constraints, swaps, pack costs, stock transactions, left
 - Grocery quantities net of stock, full-pack costs, editable pack prices and nutrition. Three Tesco products have dated snapshots; other prices are explicitly estimates.
 - Purchase confirmation adds raw stock. Preparing a meal deducts raw stock once and creates measured portions. Eating records nutrition and consumes a portion.
 - Swapping a cooked meal leaves its food in the kitchen. Unallocated portions can be assigned to another meal; eligible unallocated frozen portions can carry into a future draft.
-- Waste, stock corrections, expiry dates and whole-batch freezing/defrosting.
+- Adjustable batch yield: one cooking session makes an explicit number of servings. Record the net finished weight to see grams per serving; ingredients and shopping requirements scale with the yield.
+- Partial portions or grams eaten, fractional waste, and split fridge/freezer lots. Nutrition uses the amount actually eaten; uneaten fractions stay available for later meals.
+- A weekly review covering enjoyment, hunger, effort, spending, waste and recipe ratings. Ratings and structured preferences influence later plans; optionally rebuild an unused next-week draft. Calorie targets are not changed automatically.
+- Receipt photo/text parsing and barcode photo/number lookup, followed by editable, opt-in purchase rows. Confirmed imports add stock and spending and update pack prices. Receipt photos/text stay in the browser; barcode lookup sends only the code to Open Food Facts.
 - Weekly draft generation on return to the app near the end of a week. Shopping estimates account for outstanding earlier plans; stock is checked before confirmation.
 - Food diary by day: actual eaten recipe portions plus extra food, drinks and restaurant entries. Supports pack nutrition per 100 g or per portion; missing macros remain unknown.
 - Manual weight, glucose, steps, workout calories, waist, sleep, energy, HbA1c and blood-pressure logs. Weight/glucose charts, BMI reference range and an editable first milestone.
@@ -43,7 +46,7 @@ Dates for meals and the diary use Europe/London, including daylight saving. Calo
 Deployment has **not** been performed or verified against a hosted database.
 
 1. Import this GitHub repository into Vercel with the repository root selected.
-2. Select **Other** as the framework. Use `public` as the output directory. There is no frontend build command; install dependencies with `npm ci`.
+2. Select **Other** as the framework. Install dependencies with `npm ci`, use `npm run build` as the build command, and `public` as the output directory. The build bundles the on-device OCR/barcode reader and copies its worker/language files. Generated `public/vendor/` files are intentionally not committed. `npm run dev` builds them automatically; run the build first if using `npm start`.
 3. Connect a PostgreSQL database. Put its connection string in the server-only `DATABASE_URL` environment variable. Follow the provider's TLS settings; do not disable certificate verification.
 4. Set a strong private `INVITE_CODE`. Hosted registration refuses to operate without it. Do not put credentials in source control or in browser-facing variables.
 5. Deploy, then test registration, onboarding, purchase/cook/eat, refresh, sign-out/sign-in, account separation, export, recovery and deletion using a disposable test account.
@@ -61,7 +64,9 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 - **No automatic medical diet adjustment from a glucose reading.** The app logs context and flags readings outside saved targets; it does not treat spikes, change medicines or promise remission.
 - Generic nutrition values and cooking times require real-world recipe testing. Verify product labels, allergens, portions, food temperature and storage. The library is not clinically reviewed.
 - The initial allergy model covers the allergens represented by this library, not every possible allergy or product cross-contamination warning.
-- Freezing/defrosting currently applies to a whole remaining batch. New batches enforce hour-exact use-by limits, and defrosting requires confirmation. Splitting a batch into fridge/freezer lots is follow-up work. Follow the displayed cooling and reheating guidance.
+- Split batches enforce hour-exact use-by limits. Defrosting requires explicit confirmation; already-thawed portions cannot be refrozen through the app. Follow the displayed cooling and reheating guidance.
+- Receipt recognition is assisted entry, not an automatic checkout record. Review discounts, line totals, quantities and units. Product lookup is community data, may be unavailable or incomplete, and does not provide retailer prices. Imports currently match the existing ingredient library only. Verify the actual product's allergens and raw/dry/drained nutrition basis.
+- Cooked grams are calculated from the weight of the original complete batch and its yield, not inferred from raw weight. Divide every component equally. Correcting cooked weight changes gram conversion, not the ingredient-derived calories or historical food logs.
 - Budget optimisation is a heuristic, not a guarantee. Tight budgets/constraints can reduce variety or leave a plan above budget. Review daily calories and shop totals before using a plan.
 - Weekly drafts are created when the app is opened, not by a scheduled background job.
 - Before public launch: clinical/food-safety review, privacy and consent review, verified database backups and restore tests, stronger abuse protection, observability, accessible-device testing, broader recipe coverage and hosted end-to-end testing.
@@ -69,10 +74,16 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 ## Project map
 
 - `public/`: responsive UI, shared calculations and offline shell
+- `client/capture.js`, `scripts/build.mjs`: locally bundled photo readers; no receipt-photo upload or paid OCR service
 - `api/index.js`: authenticated HTTP endpoints
 - `lib/catalog.mjs`: structured recipes, ingredients and cooking instructions
 - `lib/domain.mjs`: planning, shopping, inventory and logging rules
+- `lib/batch-actions.mjs`, `lib/reviews.mjs`, `lib/purchase-import.mjs`: partial servings, learning feedback and confirmed purchase transactions
 - `lib/store.mjs`: PostgreSQL transactions and local development persistence
 - `tests/`: automated regression tests
 - `PRODUCT_MVP.md`: original product specification
 - `IMPLEMENTATION_NOTES.md`: decisions, changes and acceptance notes for this build
+
+## Product data and photo readers
+
+Barcode lookups use [Open Food Facts](https://world.openfoodfacts.org), whose community database is available under the [Open Database License](https://world.openfoodfacts.org/data). The app shows attribution when reviewing returned product data. It does not retrieve product images. Receipt recognition uses [Tesseract.js](https://github.com/naptha/tesseract.js), and barcode photos use [ZXing Browser](https://github.com/zxing-js/browser). These libraries are bundled at build time; images are processed in the browser. The first receipt scan downloads the reader and English language model from your app host.
