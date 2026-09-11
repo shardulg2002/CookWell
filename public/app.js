@@ -1,10 +1,12 @@
 import { dayKey, weightReference } from "./metrics.js";
 import { createFeatures } from "./features.js";
+import { createSessionCooking } from "./session-cooking.js";
+import { createRhythmUI } from "./rhythm-ui.js";
 import { yieldInfo, portionDescription } from "./portions.js";
 import { reviewSummary } from "./review.js";
 import { parseReceipt, suggestIngredient, validBarcode } from "./imports.js";
 import { dailyCard, weightCard } from "./wellbeing.js";
-import { instructionList, techniqueVisual, stepAmounts } from "./cooking.js";
+import { instructionList } from "./cooking.js";
 const $ = (s) => document.querySelector(s);
 const esc = (v) =>
   String(v ?? "").replace(
@@ -18,6 +20,7 @@ const cash = (p) => "£" + (p / 100).toFixed(2),
   round = (n) => Math.round(n * 10) / 10;
 const localDay = () => dayKey();
 let intakeDate = localDay();
+let shoppingTripDate = "";
 const addDays = (d, n) =>
   new Date(Date.parse(d + "T12:00:00Z") + n * 86400000)
     .toISOString()
@@ -40,10 +43,6 @@ let state,
   onboardStep = 0,
   activeRecipe = null,
   activeMeal = null,
-  timerDeadline = 0,
-  timerPaused = 0,
-  timerInterval = null,
-  stepIndex = 0,
   busy = false;
 const catalog = () => Object.fromEntries(state.catalog.map((r) => [r.id, r]));
 const chosenPlan = () =>
@@ -80,6 +79,7 @@ async function api(action, data, method) {
   const result = await response.json();
   if (!response.ok) {
     if (response.status === 401 && state) {
+      sessionCooking.reset();
       state = null;
       renderAuth();
     }
@@ -113,19 +113,13 @@ function showError(e) {
   toast(e.message);
 }
 function modal(html) {
-  stopTimer();
   const d = $("#dialog");
   d.innerHTML = `<button class="close" data-action="close" aria-label="Close dialog">×</button>${html}<p class="error" role="alert"></p>`;
   if (!d.open) d.showModal();
   d.scrollTop = 0;
 }
 function closeDialog() {
-  stopTimer();
   $("#dialog").close();
-}
-function stopTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
 }
 const btn = (label, action, data = "", style = "") =>
   `<button class="btn ${style}" data-action="${action}" ${data}>${label}</button>`;
@@ -176,6 +170,27 @@ const features = createFeatures({
   toast,
   openMeal,
 });
+const sessionCooking = createSessionCooking({
+  getState: () => state,
+  chosenPlan,
+  api,
+  modal,
+  esc,
+  btn,
+  toast,
+  prepare: (id) => features.prepare(id),
+});
+const rhythmUI = createRhythmUI({
+  getState: () => state,
+  chosenPlan,
+  modal,
+  mutate,
+  esc,
+  btn,
+  field,
+  select,
+  cash,
+});
 function renderOnboarding() {
   const p = state.profile || {},
     t = p.targets || {};
@@ -215,7 +230,24 @@ function renderOnboarding() {
    )
    .join(
      "",
-   )}</div><div class="notice">Recipes use grams and millilitres, including oil and sauces. A set of kitchen scales makes portioning easier. Batch meals need storage; freezing is offered when you have a freezer.</div></section>
+   )}</div>${field("Hob rings available at once", "hobCount", "number", p.hobCount || 1, 'min="1" max="4" step="1" required')}${select(
+   "Batch cooking interval",
+   "cookEveryDays",
+   [
+     [3, "Every 3 days"],
+     [2, "Every 2 days"],
+   ],
+   p.cookEveryDays || 3,
+ )}${select(
+   "Shopping interval",
+   "shopEveryDays",
+   [
+     [7, "Once a week"],
+     [3, "Every 3 days"],
+     [2, "Every 2 days"],
+   ],
+   p.shopEveryDays || 7,
+ )}<div class="notice">Recipes use grams and millilitres, including oil and sauces. A set of kitchen scales makes portioning easier. Batch meals need storage; freezing is offered when you have a freezer.</div></section>
  <section data-step="2"><p class="eyebrow">03 / TASTE & DISCOVERY</p><h1>Favourites, with room to explore.</h1><p class="intro">Likes guide discovery; allergies and ingredients you avoid are firm exclusions.</p><div class="fields">${select(
    "Diet",
    "diet",
@@ -371,10 +403,20 @@ function render() {
   const p = state.profile;
   $("#app").innerHTML =
     `<div class="app-shell"><aside class="sidebar"><a class="brand" href="/"><img src="/icon.svg" alt="">CookWell</a><nav>${navs.map(([id, icon, label]) => `<button class="nav ${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav><div class="sidebar-foot"><strong>A little better, every day.</strong>One meal, one shop, one small step at a time.</div></aside><main class="main"><header class="topbar"><div><p class="eyebrow">${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p><h1>${{ today: `Welcome back, ${esc(p.name)}.`, plan: "A week that works for you.", kitchen: "A little less waste.", recipes: "Find your next favourite.", progress: "Your own pace. Your progress.", settings: "Make yourself at home." }[screen]}</h1></div><button class="profile" data-action="nav" data-screen="settings" aria-label="Settings">${esc(p.name.slice(0, 2).toUpperCase())}</button></header><div id="screen">${{ today: renderToday, plan: renderPlan, kitchen: renderKitchen, recipes: renderRecipes, progress: renderProgress, settings: renderSettings }[screen]()}</div></main><nav class="mobile-nav" aria-label="Main navigation">${navs.map(([id, icon, label]) => `<button class="${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav></div>`;
-  $("#screen").insertAdjacentHTML("afterbegin", features.tools(screen));
+  $("#screen").insertAdjacentHTML(
+    "afterbegin",
+    features.tools(screen) +
+      sessionCooking.resumeButton() +
+      rhythmUI.cards(screen),
+  );
 }
 function totals(plan) {
-  const rows = plan?.shopping || [],
+  const rows =
+      (shoppingTripDate
+        ? plan?.shoppingTrips?.find((t) => t.date === shoppingTripDate)?.rows
+        : null) ||
+      plan?.shopping ||
+      [],
     spent = state.purchases
       .filter((p) => p.planId === plan?.id)
       .reduce((n, p) => n + p.cost, 0),
@@ -442,7 +484,7 @@ function renderKitchen() {
     t = totals(plan),
     byGroup = {};
   for (const r of rows) (byGroup[r.group] ??= []).push(r);
-  return `<div class="section-head"><div><p class="eyebrow">${plan ? dateLabel(plan.start) + " – " + dateLabel(addDays(plan.start, 6)) : "YOUR KITCHEN"}</p><h2>From shopping bag to dinner.</h2><p>${cash(t.spent)} purchased · ${cash(t.remaining)} still needed</p></div>${btn("+ Add stock", "stock")}</div><div class="notice">Prices include full packs and edible quantities (e.g. 240 g drained chickpeas per can). Retailer snapshots have a source and date; other prices are estimates. Update the price or nutrition from the pack you buy.</div><div class="grid2 section"><section><h2>Shopping list</h2>${Object.entries(
+  return `<div class="section-head"><div><p class="eyebrow">${plan ? dateLabel(plan.start) + " – " + dateLabel(addDays(plan.start, 6)) : "YOUR KITCHEN"}</p><h2>From shopping bag to dinner.</h2><p>${cash(t.spent)} purchased · ${cash(t.remaining)} still needed</p></div>${btn("+ Add stock", "stock")}</div><div class="notice">Prices include full packs and edible quantities (e.g. 240 g drained chickpeas per can). Retailer snapshots have a source and date; other prices are estimates. Update the price or nutrition from the pack you buy.</div><div class="grid2 section"><section><h2>Shopping list</h2><label>Shopping trip<select id="shopping-trip">${options([["", "Whole week"], ...(plan?.shoppingTrips || []).map((t) => [t.date, t.date + " · through " + t.through + " · " + cash(t.total)])], shoppingTripDate)}</select></label>${shoppingTripDate ? '<p class="hint">This trip only. Later trips assume earlier purchases and ingredient use; review before buying.</p>' : ""}${Object.entries(
     byGroup,
   )
     .map(
@@ -586,35 +628,12 @@ async function openMeal(id) {
   if (m.parentId && !batch) {
     const parent = p.meals.find((x) => x.id === m.parentId);
     modal(
-      `<p class="eyebrow">PLANNED LEFTOVER</p><h2>This portion comes from a batch.</h2><p class="intro">Prepare ${esc(catalog()[m.recipeId].title)} from the ${slotNames[parent.slot].toLowerCase()} slot on ${dateLabel(parent.date)} first.</p>${btn("Open original batch →", "meal", `data-id="${parent.id}"`)}`,
+      `<p class="eyebrow">PLANNED LEFTOVER</p><h2>This portion comes from a batch.</h2><p class="intro">Prepare ${esc(catalog()[m.recipeId].title)} in the cooking session on ${dateLabel(parent.cookDate || parent.date)} first.</p>${btn("Open original batch →", "meal", `data-id="${parent.id}"`)}`,
     );
     return;
   }
   const mult = batch ? m.multiplier : yieldInfo(p, m).multiplier;
   await openRecipe(m.recipeId, mult, m);
-}
-function guided() {
-  const st = activeRecipe.steps[stepIndex];
-  modal(
-    `<p class="eyebrow">GUIDED COOKING · ${stepIndex + 1} / ${activeRecipe.steps.length}</p><h2>${esc(st.title)}</h2><div class="step-progress">${activeRecipe.steps.map((_, i) => `<i class="${i <= stepIndex ? "done" : ""}"></i>`).join("")}</div>${stepAmounts(activeRecipe, st)}${instructionList(st.text)}${techniqueVisual(activeRecipe, st)}${st.seconds ? `<div class="row"><div class="timer" id="timer">${Math.floor(st.seconds / 60)}:00</div>${btn("Start timer", "timer-start", 'data-seconds="' + st.seconds + '"', "soft")}${btn("Pause", "timer-pause", "", "outline")}</div>` : ""}<div class="row between">${btn("← Back", "step-back", "", "outline")}${btn(stepIndex === activeRecipe.steps.length - 1 ? "Finish →" : "Next step →", "step-next")}</div>`,
-  );
-}
-function startTimer(seconds) {
-  stopTimer();
-  timerDeadline = Date.now() + (timerPaused || seconds) * 1000;
-  timerPaused = 0;
-  const tick = () => {
-    const left = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
-    if ($("#timer"))
-      $("#timer").textContent =
-        Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
-    if (left === 0) {
-      stopTimer();
-      toast("Timer finished. Check your food before continuing.");
-    }
-  };
-  tick();
-  timerInterval = setInterval(tick, 250);
 }
 function swapDialog(id) {
   const { m, r } = mealInfo(id);
@@ -653,7 +672,12 @@ function priceDialog(id) {
   );
 }
 function purchaseDialog(id) {
-  const r = chosenPlan().shopping.find((i) => i.id === id);
+  const p = chosenPlan();
+  const r = (
+    (shoppingTripDate
+      ? p.shoppingTrips?.find((t) => t.date === shoppingTripDate)?.rows
+      : null) || p.shopping
+  ).find((i) => i.id === id);
   modal(
     `<p class="eyebrow">CONFIRM PURCHASE</p><h2>${esc(r.name)}</h2><form id="purchase-form" data-id="${id}">${field("Packs bought", "packs", "number", r.packs, 'required min="1" max="100" step="1"')}${field("Use-by date on pack (optional)", "expires", "date", "", "")}${select(
       "Storage",
@@ -762,6 +786,12 @@ document.addEventListener("click", async (e) => {
     id = b.dataset.id;
   e.preventDefault();
   try {
+    if (await sessionCooking.click(a, id, b)) return;
+    if (rhythmUI.click(a, id, b)) return;
+    if (a === "guided") {
+      await sessionCooking.single(activeRecipe, activeMeal);
+      return;
+    }
     if (await features.click(a, id, b)) return;
     if (a === "auth-mode") {
       authMode = b.dataset.mode;
@@ -783,6 +813,7 @@ document.addEventListener("click", async (e) => {
     }
     if (a === "logout") {
       await api("logout", {});
+      sessionCooking.reset();
       state = null;
       authMode = "login";
       renderAuth();
@@ -845,33 +876,6 @@ document.addEventListener("click", async (e) => {
       screen = "kitchen";
       render();
     }
-    if (a === "guided") {
-      stepIndex = 0;
-      timerPaused = 0;
-      guided();
-    }
-    if (a === "step-back") {
-      stepIndex = Math.max(0, stepIndex - 1);
-      timerPaused = 0;
-      guided();
-    }
-    if (a === "step-next") {
-      timerPaused = 0;
-      if (stepIndex < activeRecipe.steps.length - 1) {
-        stepIndex++;
-        guided();
-      } else if (activeMeal) {
-        prepareDialog(activeMeal.id);
-      } else {
-        closeDialog();
-        toast("Recipe completed. Add it to a meal slot to track portions.");
-      }
-    }
-    if (a === "timer-start") startTimer(Number(b.dataset.seconds));
-    if (a === "timer-pause") {
-      timerPaused = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
-      stopTimer();
-    }
     if (a === "prepare") prepareDialog(id);
 
     if (a === "feedback") {
@@ -930,9 +934,12 @@ document.addEventListener("submit", async (e) => {
   const submit = f.querySelector("button[type=submit],button:not([type])");
   if (submit) submit.disabled = true;
   try {
+    if (sessionCooking.submit(f, d)) return;
+    if (await rhythmUI.submit(f, d)) return;
     if (await features.submit(f, d)) return;
     if (f.id === "auth-form") {
       const result = await api(authMode, d);
+      sessionCooking.reset();
       state = result.state;
       render();
       if (result.recoveryCode)
@@ -951,6 +958,7 @@ document.addEventListener("submit", async (e) => {
           id,
           freeze: d.freeze === "on",
           cookedWeight: d.cookedWeight,
+          plannedStorage: d.plannedStorage === "on",
         })
       )
         toast("Prepared. Ingredients deducted and portions saved.");
@@ -987,7 +995,12 @@ document.addEventListener("change", (e) => {
     intakeDate = e.target.value || localDay();
     render();
   }
+  if (e.target.id === "shopping-trip") {
+    shoppingTripDate = e.target.value;
+    render();
+  }
   if (e.target.id === "plan-select") {
+    shoppingTripDate = "";
     planId = e.target.value;
     render();
   }
@@ -999,7 +1012,7 @@ document.addEventListener("input", (e) => {
   features.input(e.target);
   if (e.target.closest("#onboarding-form")) updateEstimate();
 });
-$("#dialog").addEventListener("close", stopTimer);
+
 async function boot() {
   try {
     state = (await api("state")).state;

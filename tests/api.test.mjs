@@ -94,6 +94,16 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
         .status,
       400,
     );
+    await act("rhythm", {
+      planId: state.plans[0].id,
+      cooking: "batch",
+      cookEveryDays: 3,
+      shopEveryDays: 3,
+      hobCount: 2,
+    });
+    assert.equal(state.profile.hobCount, 2);
+    assert.equal(state.plans[0].sessions.length, 3);
+    assert.equal(state.plans[0].shoppingTrips.length, 3);
     const p = state.plans[0],
       m = p.meals.find(
         (m) => !m.parentId && p.meals.some((c) => c.parentId === m.id),

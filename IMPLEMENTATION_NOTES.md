@@ -17,13 +17,19 @@ The original prompt and PRODUCT_MVP.md remain the starting point. Current decisi
 
 ## Verification
 
-All 34 automated tests pass. They cover the original workflows plus custom batch yields, split-lot reservations, fractional eating/waste, cooked-weight conversion, legacy batches, review-driven draft regeneration, receipt parsing, barcode validation and confirmed purchase imports. An authenticated API journey verifies persistence across a server restart. Tests use isolated temporary account stores, not the user's live data.
+All 43 automated tests pass. They cover the original workflows plus custom batch yields, split-lot reservations, fractional eating/waste, cooked-weight conversion, legacy batches, review-driven draft regeneration, receipt parsing, barcode validation and confirmed purchase imports. New checks cover cooking cadence, automatic portion regrouping, expiry-aware trips, parallel grain/sauce tasks, attended-work blocking, oven reservations and deadlock-free walkthroughs for every recipe. Authenticated API journeys verify rhythm preferences, stock transactions and persistence across a server restart. Tests use isolated temporary account stores, not the user's live data.
 
 Browser checks verified batch-yield screens, the live grams-per-serving calculation, weekly review controls, receipt-text review, and on-device OCR of a fictional receipt image. A live Open Food Facts lookup succeeded for a public example barcode. Barcode-photo decoding, real supermarket receipts and iPhone camera formats still need broader device testing. The user's saved stock and health records were not modified by the browser checks.
 
 The PostgreSQL implementation and Vercel configuration exist, but no hosted database or deployment was available for verification. Use the deployment checklist in README before entering personal health data online.
 
 ## Completed follow-up features
+
+- Batch-first planning defaults to three-day cooking blocks and weekly shopping, with editable two-day/daily alternatives and a hob-ring count. Existing weeks can be regrouped without replacing their recipes or completed food. New plans repeat both main meals and breakfast/snack options within a block to reduce preparation work.
+- Servings are counted from the unprepared meal occurrences, not an arbitrary fixed batch of four. Swapping, restoring or skipping meals regroups the remaining batch. Preparing food is still a separate confirmation, including a fridge/freezer split calculated for the actual cooking date.
+- Cooking stages are broken into single-action cards. A dependency graph joins rice/pasta back to the finished dish, holds hob/oven resources throughout cooking and permits parallel work only during suitable waiting stages. The next task is recommended, with alternatives tucked away. Timers keep their own deadlines and require food checks; no timer marks food cooked automatically.
+- A browser check verified the focused recipe actions and full-batch ingredient quantities. The user's requested three-day cooking / weekly shopping rhythm and two hob rings were saved. No fictional food, purchases or health readings were added.
+- Walkthrough progress is intentionally tab-local; reliable locked-screen alarms and server-synced walkthrough recovery are not implemented. No Tasty videos or photos were copied. This is an original interface using the existing recipe library and technique illustrations.
 
 - One batch explicitly yields N servings. Yield changes scale the recipe and shopping list. Extra servings become unallocated cooked stock. Net cooked batch weight gives grams per serving; it is optional and can be recorded later.
 - A meal can be eaten in portions or grams. Nutrition is scaled from the saved cooking-time nutrition snapshot. Unconsumed fractions are released for reuse. Fridge/freezer lots retain their origin, serving weight and use-by metadata, including across fractional splits.

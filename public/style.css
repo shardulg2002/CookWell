@@ -1188,6 +1188,97 @@ details[open] {
   width: 100%;
   height: 110px;
 }
+.session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+.session-card ul {
+  padding-left: 20px;
+  margin: 18px 0;
+}
+.session-card li {
+  margin-bottom: 12px;
+}
+.session-card li small {
+  display: block;
+  margin-top: 3px;
+}
+.session-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.timer-rail {
+  background: #edf1e2;
+  padding: 16px;
+  border-radius: 16px;
+  margin: 16px 0;
+}
+.timer-tile {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #ccd5c4;
+}
+.timer-tile span,
+.timer-tile small {
+  grid-column: 1;
+}
+.timer-tile b {
+  grid-column: 2;
+  grid-row: 1;
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
+}
+.timer-tile button {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  align-self: center;
+}
+.timer-tile.needs-check {
+  background: #fff0d7;
+  padding: 12px;
+  border-radius: 10px;
+}
+.focus-step {
+  border: 1px solid #d9dfcd;
+  border-radius: 18px;
+  padding: 24px;
+  background: #fffef9;
+  margin: 20px 0;
+}
+.focus-instruction .instruction-list {
+  font-size: 23px;
+  line-height: 1.6;
+  padding-left: 24px;
+}
+.focus-step .cook-visual {
+  margin: 12px 0;
+}
+.focus-step form {
+  width: 100%;
+}
+.focus-step .row .btn {
+  min-height: 48px;
+}
+#dialog:has(#session-cooking) {
+  max-width: 920px;
+}
+@media (max-width: 540px) {
+  .focus-step {
+    padding: 16px;
+  }
+  .focus-instruction .instruction-list {
+    font-size: 20px;
+  }
+  .timer-tile {
+    display: flex;
+    flex-direction: column;
+  }
+}
 .import-row {
   border: 1px solid #dce0d1;
   border-radius: 12px;

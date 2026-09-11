@@ -64,7 +64,7 @@ export function createFeatures(ctx) {
     if (meal.status !== "planned") return "";
     const y = yieldInfo(p, meal),
       cal = recipe(meal.recipeId).nutrition.kcal * meal.multiplier;
-    return `<div class="notice"><strong>1 cooking batch → ${y.portions} portion${y.portions === 1 ? "" : "s"}</strong><p>Cook once. Divide every component equally into ${y.portions} serving${y.portions === 1 ? "" : "s"}. One serving ≈ ${Math.round(cal)} kcal. ${y.group.length} serving(s) are in this plan; ${y.portions - y.group.length} extra serving(s) go into your kitchen.</p><p>Record the net finished food weight after cooking to calculate grams per serving. Water loss means raw weight is not finished serving weight.</p><form id="batch-size-form" data-id="${meal.id}">${field("Total portions to make", "portions", "number", y.portions, `required min="${y.group.length}" max="20" step="1"`)}<button class="btn outline">Update batch & shopping quantities</button></form></div>`;
+    return `<div class="notice"><strong>1 cooking batch → ${y.portions} portion${y.portions === 1 ? "" : "s"}</strong><p>Cook once. Divide every component equally into ${y.portions} serving${y.portions === 1 ? "" : "s"}. One serving ≈ ${Math.round(cal)} kcal. ${y.group.length} serving(s) are in this plan; ${y.portions - y.group.length} extra serving(s) go into your kitchen.</p><p>Record the net finished food weight after cooking to calculate grams per serving. Water loss means raw weight is not finished serving weight.</p><p><strong>Automatically counted from your plan:</strong> ${y.group.map((m) => m.date + " " + m.slot).join(" · ")}. Swaps and skipped meals recalculate this batch.</p><details><summary>Optional: make extra freezer portions</summary><form id="batch-size-form" data-id="${meal.id}">${field("Total portions to make", "portions", "number", y.portions, `required min="${y.group.length}" max="20" step="1"`)}<button class="btn outline">Update batch & shopping quantities</button></form></details></div>`;
   }
   function prepare(id) {
     const { m, p, batch } = mealInfo(id);
@@ -77,8 +77,18 @@ export function createFeatures(ctx) {
       return;
     }
     const y = yieldInfo(p, m);
+    const rice = recipe(m.recipeId).items.some((i) => i.id === "rice"),
+      cutoff = new Date(
+        Date.parse(dayKey() + "T12:00:00Z") + (rice ? 0 : 1) * 86400000,
+      )
+        .toISOString()
+        .slice(0, 10);
+    const freezeCount =
+      y.group.filter((x) => x.date > cutoff).length +
+      y.portions -
+      y.group.length;
     modal(
-      `<p class="eyebrow">FINISH COOKING</p><h2>1 batch · ${y.portions} portion${y.portions === 1 ? "" : "s"}</h2><p>Weigh all finished food without its containers. Divide each component equally (for example, rice and curry separately). Nutrition assumes the exact recipe ingredients were used and mixed evenly.</p><form id="prepare-form" data-id="${id}" data-portions="${y.portions}">${field("Net finished weight of the whole batch (g, optional)", "cookedWeight", "number", "", 'min="1" max="50000" step="any"')}<p id="yield-preview" class="notice">${y.portions} equal serving${y.portions === 1 ? "" : "s"}. Add the weight to see grams per serving.</p><p class="hint">Cool and refrigerate promptly. Rice: use within 24 hours; other refrigerated leftovers: 48 hours. Freeze later portions promptly. You can split fridge/freezer portions in Kitchen after saving.</p><label class="check-label"><input type="checkbox" name="freeze" ${getState().profile.equipment.includes("freezer") ? "" : "disabled"}>Freeze the whole batch</label><button class="btn">Confirm prepared</button></form>`,
+      `<p class="eyebrow">FINISH COOKING</p><h2>1 batch · ${y.portions} portion${y.portions === 1 ? "" : "s"}</h2><p>Weigh all finished food without its containers. Divide each component equally (for example, rice and curry separately). Nutrition assumes the exact recipe ingredients were used and mixed evenly.</p><form id="prepare-form" data-id="${id}" data-portions="${y.portions}">${field("Net finished weight of the whole batch (g, optional)", "cookedWeight", "number", "", 'min="1" max="50000" step="any"')}<p id="yield-preview" class="notice">${y.portions} equal serving${y.portions === 1 ? "" : "s"}. Add the weight to see grams per serving.</p><p class="hint">Cool and refrigerate promptly. Rice: use within 24 hours; other refrigerated leftovers: 48 hours. Freeze later portions promptly. You can split fridge/freezer portions in Kitchen after saving.</p>${freezeCount && getState().profile.equipment.includes("freezer") ? `<label class="check-label"><input type="checkbox" name="plannedStorage" checked>I have stored ${y.portions - freezeCount} portion(s) for the fridge / today and frozen ${freezeCount} for later meals</label>` : ""}<label class="check-label"><input type="checkbox" name="freeze" ${getState().profile.equipment.includes("freezer") ? "" : "disabled"}>Freeze the whole batch</label><button class="btn">Confirm prepared</button></form>`,
     );
   }
   function eat(id) {

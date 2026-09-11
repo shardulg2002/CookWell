@@ -25,6 +25,9 @@ Tests cover onboarding, constraints, swaps, pack costs, stock transactions, left
 
 - Five-step onboarding: routine, budget, equipment, food exclusions, discovery, energy estimate, optional clinician-set glucose targets, and an editable weight milestone.
 - A seven-day plan with breakfast, lunch, snack and dinner; individual swaps, eating-out and skipped slots.
+- Cooking cadence: batch every 2 or 3 days, or daily. New three-day plans use cooking days 1/4/7 and repeat meals within each block; same-recipe occurrences are combined automatically. One session can prepare breakfast, snacks and multiple main dishes. Existing weeks can be regrouped with **Set my rhythm**, preserving their recipes and completed food.
+- Focused cooking walkthroughs: one action at a time, exact batch quantities, recommended next tasks, independent timers and explicit food checks. Rice/pasta can cook while another task is prepared; attended pan work does not suggest multitasking. Hob counts and the single oven are reserved so they cannot be overbooked.
+- Weekly shopping or 2/3-day trips, with full-pack carryover and raw-stock expiry checked against the cooking date. Later-trip figures are forecasts until purchases are confirmed; verify pack use-by dates and freeze suitable ingredients when needed.
 - A structured 28-recipe library, quantity-derived nutrition, exact metric ingredients, short guided steps, timers, simple technique diagrams and a relevant external onion-chopping tutorial link.
 - Grocery quantities net of stock, full-pack costs, editable pack prices and nutrition. Three Tesco products have dated snapshots; other prices are explicitly estimates.
 - Purchase confirmation adds raw stock. Preparing a meal deducts raw stock once and creates measured portions. Eating records nutrition and consumes a portion.
@@ -67,6 +70,9 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 - Split batches enforce hour-exact use-by limits. Defrosting requires explicit confirmation; already-thawed portions cannot be refrozen through the app. Follow the displayed cooling and reheating guidance.
 - Receipt recognition is assisted entry, not an automatic checkout record. Review discounts, line totals, quantities and units. Product lookup is community data, may be unavailable or incomplete, and does not provide retailer prices. Imports currently match the existing ingredient library only. Verify the actual product's allergens and raw/dry/drained nutrition basis.
 - Cooked grams are calculated from the weight of the original complete batch and its yield, not inferred from raw weight. Divide every component equally. Correcting cooked weight changes gram conversion, not the ingredient-derived calories or historical food logs.
+- Cooking walkthrough progress and timers live in the current tab, not on the server. Closing the dialog keeps timers running; refreshing, signing out or closing the tab ends the walkthrough. Background alarms on a locked iPhone are not guaranteed. Keep an independent kitchen timer for safety; timers never prove doneness or automatically deduct ingredients.
+- Three-day batches require freezing later portions. Date-only plans conservatively earmark rice for freezing after cooking day and other food from day three. Actual cooking confirmation recalculates this split for today's date. A fridge-only setup uses at most two-day batches; a rice swap without a freezer may add a same-day cooking task. No cold storage means daily preparation.
+- Reheating/assembly still happens between batch sessions. Preparing several dishes can take substantially longer than 15–20 minutes; active-minute estimates are indicative sums, not a guaranteed schedule. A regrouped older week may contain more dishes than a newly generated batch-first plan.
 - Budget optimisation is a heuristic, not a guarantee. Tight budgets/constraints can reduce variety or leave a plan above budget. Review daily calories and shop totals before using a plan.
 - Weekly drafts are created when the app is opened, not by a scheduled background job.
 - Before public launch: clinical/food-safety review, privacy and consent review, verified database backups and restore tests, stronger abuse protection, observability, accessible-device testing, broader recipe coverage and hosted end-to-end testing.
@@ -79,6 +85,8 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 - `lib/catalog.mjs`: structured recipes, ingredients and cooking instructions
 - `lib/domain.mjs`: planning, shopping, inventory and logging rules
 - `lib/batch-actions.mjs`, `lib/reviews.mjs`, `lib/purchase-import.mjs`: partial servings, learning feedback and confirmed purchase transactions
+- `lib/rhythm.mjs`: automatic batch grouping, storage allocation and scheduled shopping
+- `public/cook-flow.js`, `public/session-cooking.js`: dependency/equipment-aware guided cooking and concurrent timers
 - `lib/store.mjs`: PostgreSQL transactions and local development persistence
 - `tests/`: automated regression tests
 - `PRODUCT_MVP.md`: original product specification

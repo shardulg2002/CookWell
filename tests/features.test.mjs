@@ -93,13 +93,14 @@ test("custom batch yield scales requirements, stock and measured servings exactl
 });
 test("half a portion logs half nutrition and releases the uneaten fraction", () => {
   const { s, m, b } = prepared();
+  const alreadyFree = freePortions(s, b);
   const before = b.remaining,
     kcal = b.nutrition.kcal;
   applyAction(s, "eat", { id: m.id, amount: 0.5 });
   assert.equal(b.remaining, before - 0.5);
   assert.equal(m.actualNutrition.kcal, Math.round(kcal * 0.5 * 1e6) / 1e6);
   assert.equal(m.eatenGrams, 200);
-  assert.equal(freePortions(s, b), 0.5);
+  assert.equal(freePortions(s, b), alreadyFree + 0.5);
   invariants(s);
   assert.throws(
     () => applyAction(s, "eat", { id: m.id, amount: 0.5 }),
