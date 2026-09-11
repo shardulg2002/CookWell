@@ -41,6 +41,7 @@ Tests cover onboarding, constraints, swaps, pack costs, stock transactions, left
 - Manual weight, glucose, steps, workout calories, waist, sleep, energy, HbA1c and blood-pressure logs. Weight/glucose charts, BMI reference range and an editable first milestone.
 - Separate accounts, password hashing, HttpOnly sessions, invitation-only hosted registration, export and password-confirmed account deletion.
 - Responsive interface, home-screen manifest and an offline notice. Private records are not stored in a service-worker cache.
+- A prioritised in-app action centre for due cooking and shopping sessions, expiring raw or cooked food, weekly reviews and optional daily health check-ins. It does not require notification permission and does not send background alerts.
 
 Dates for meals and the diary use Europe/London, including daylight saving. Calorie intake does not automatically increase when workout calories are logged.
 
@@ -71,6 +72,7 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 - Receipt recognition is assisted entry, not an automatic checkout record. Review discounts, line totals, quantities and units. Product lookup is community data, may be unavailable or incomplete, and does not provide retailer prices. Imports currently match the existing ingredient library only. Verify the actual product's allergens and raw/dry/drained nutrition basis.
 - Cooked grams are calculated from the weight of the original complete batch and its yield, not inferred from raw weight. Divide every component equally. Correcting cooked weight changes gram conversion, not the ingredient-derived calories or historical food logs.
 - Cooking walkthrough progress and timers live in the current tab, not on the server. Closing the dialog keeps timers running; refreshing, signing out or closing the tab ends the walkthrough. Background alarms on a locked iPhone are not guaranteed. Keep an independent kitchen timer for safety; timers never prove doneness or automatically deduct ingredients.
+- The action centre is shown when the app is opened. Push notifications and scheduled background reminders are not implemented.
 - Three-day batches require freezing later portions. Date-only plans conservatively earmark rice for freezing after cooking day and other food from day three. Actual cooking confirmation recalculates this split for today's date. A fridge-only setup uses at most two-day batches; a rice swap without a freezer may add a same-day cooking task. No cold storage means daily preparation.
 - Reheating/assembly still happens between batch sessions. Preparing several dishes can take substantially longer than 15–20 minutes; active-minute estimates are indicative sums, not a guaranteed schedule. A regrouped older week may contain more dishes than a newly generated batch-first plan.
 - Budget optimisation is a heuristic, not a guarantee. Tight budgets/constraints can reduce variety or leave a plan above budget. Review daily calories and shop totals before using a plan.

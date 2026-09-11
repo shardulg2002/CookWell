@@ -1,5 +1,11 @@
 # Implementation notes — 11 September 2026
 
+## In-app action centre
+
+- Today now consolidates overdue or due cooking sessions, shopping trips, expiring raw and cooked food, weekly reviews and an optional health check-in.
+- Items are ordered by urgency and link directly to the existing workflow. The list is derived from current account state, so completing an action removes it without a separate reminder database.
+- This is an in-app queue, not push notification infrastructure; it only updates when CookWell is opened.
+
 ## Underlying use case
 
 Help a first-time solo cook in the UK make affordable meals, build confidence, waste less food, and understand their own eating and health trends. The app should reduce daily decisions, not turn meals into a clinical score or force a fixed cuisine identity.

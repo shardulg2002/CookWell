@@ -433,6 +433,48 @@ small,
 .meal .link {
   font-size: 10px;
 }
+.action-list {
+  display: grid;
+  gap: 8px;
+}
+.action-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+.action-item h3 {
+  font-size: 13px;
+}
+.action-item small {
+  display: block;
+  margin-top: 2px;
+}
+.action-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #7f9b58;
+}
+.action-item.priority-0 .action-dot {
+  background: var(--red);
+}
+.action-item.priority-1 .action-dot {
+  background: #bc843c;
+}
+@media (max-width: 560px) {
+  .action-item {
+    grid-template-columns: 10px 1fr;
+  }
+  .action-item .link {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

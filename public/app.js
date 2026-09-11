@@ -7,6 +7,7 @@ import { reviewSummary } from "./review.js";
 import { parseReceipt, suggestIngredient, validBarcode } from "./imports.js";
 import { dailyCard, weightCard } from "./wellbeing.js";
 import { instructionList } from "./cooking.js";
+import { actionItems } from "./action-center.js";
 const $ = (s) => document.querySelector(s);
 const esc = (v) =>
   String(v ?? "").replace(
@@ -428,6 +429,16 @@ function mealCard(m) {
     b = state.batches.find((b) => b.id === m.batchId);
   return `<article class="meal"><p class="eyebrow">${slotNames[m.slot]}</p><h3>${m.status === "out" ? "Eating out" : m.status === "skipped" ? "Skipped" : esc(r.title)}</h3><small>${m.status === "eaten" ? "✓ Eaten" : m.parentId ? "Planned leftover" : b ? "Prepared" : `${r.active} min active`} · ${Math.round(r.nutrition.kcal * m.multiplier)} kcal planned</small><div class="actions"><button class="link" data-action="meal" data-id="${m.id}">View meal →</button>${m.status === "planned" ? `<button class="link" data-action="swap" data-id="${m.id}">Change</button>` : ""}</div></article>`;
 }
+function actionCenter(plan) {
+  const items = actionItems(state, plan, localDay());
+  if (!items.length) return "";
+  return `<section class="section action-center"><div class="section-head"><div><p class="eyebrow">TODAY'S ACTIONS</p><h2>What needs your attention.</h2></div><span class="badge">${items.length} item${items.length === 1 ? "" : "s"}</span></div><div class="action-list">${items
+    .map(
+      (item) =>
+        `<article class="action-item priority-${item.priority}"><span class="action-dot" aria-hidden="true"></span><div><h3>${esc(item.title)}</h3><small>${esc(item.detail)}</small></div><button class="link" data-action="${item.action}" ${item.target ? `data-id="${esc(item.target)}"` : ""} ${item.screen ? `data-screen="${esc(item.screen)}"` : ""}>${esc(item.label)} →</button></article>`,
+    )
+    .join("")}</div></section>`;
+}
 function renderToday() {
   const plan = chosenPlan(),
     items = plan?.meals.filter((m) => m.date === localDay()) || [],
@@ -440,7 +451,7 @@ function renderToday() {
   const expiring = state.inventory.filter(
     (i) => i.quantity > 0 && i.expires && i.expires <= addDays(localDay(), 3),
   );
-  return `<div class="hero"><article class="hero-main"><p class="eyebrow">${next ? slotNames[next.slot] + " · " + dateLabel(next.date) : "YOUR NEXT CHAPTER"}</p><h2>${r ? esc(r.title) : "Make space for a good week."}</h2><p>${next?.parentId ? "A portion from your batch. Check Kitchen before preparing something new." : "Your plan takes your kitchen, time and preferences into account."}</p><div class="row">${r ? `<span class="badge dark">${esc(r.cuisine)}</span><span class="badge dark">${r.active} min active</span>` : ""}</div><div class="row">${next ? btn("Open recipe →", "meal", `data-id="${next.id}"`, "light") : btn("Plan my week →", "nav", 'data-screen="plan"', "light")}</div><img src="/icon.svg" class="hero-art" alt=""></article><article class="card budget-card"><div class="row between"><p class="eyebrow">WEEKLY GROCERIES</p><button class="link" data-action="budget">Details →</button></div><p class="budget-amount">${cash(t.total)}</p><small>spent + still needed / ${cash(p.budget)} budget</small><div class="bar"><i style="width:${Math.min(100, (t.total / p.budget) * 100)}%"></i></div><p>${cash(Math.abs(p.budget - t.total))} ${t.total > p.budget ? "over budget" : "remaining"}</p><small>Full packs counted. ${cash(t.spent)} purchased.</small><small>Price estimates are labelled; check retailer packs.</small>${t.total > p.budget ? '<span class="badge warn">Review quantities or swap meals</span>' : ""}</article></div>${dailyCard(state, localDay(), true)}<section class="section"><div class="section-head"><div><p class="eyebrow">TODAY'S MENU</p><h2>Four small moments to eat well.</h2></div><button class="link" data-action="nav" data-screen="plan">Full week →</button></div>${items.length ? `<div class="meal-grid">${items.map(mealCard).join("")}</div>` : empty("No meals for today", "Open Plan to create a week covering today.")}</section><section class="section grid2"><article class="card"><p class="eyebrow">YOUR KITCHEN FIRST</p><h2>Use what you have.</h2>${
+  return `<div class="hero"><article class="hero-main"><p class="eyebrow">${next ? slotNames[next.slot] + " · " + dateLabel(next.date) : "YOUR NEXT CHAPTER"}</p><h2>${r ? esc(r.title) : "Make space for a good week."}</h2><p>${next?.parentId ? "A portion from your batch. Check Kitchen before preparing something new." : "Your plan takes your kitchen, time and preferences into account."}</p><div class="row">${r ? `<span class="badge dark">${esc(r.cuisine)}</span><span class="badge dark">${r.active} min active</span>` : ""}</div><div class="row">${next ? btn("Open recipe →", "meal", `data-id="${next.id}"`, "light") : btn("Plan my week →", "nav", 'data-screen="plan"', "light")}</div><img src="/icon.svg" class="hero-art" alt=""></article><article class="card budget-card"><div class="row between"><p class="eyebrow">WEEKLY GROCERIES</p><button class="link" data-action="budget">Details →</button></div><p class="budget-amount">${cash(t.total)}</p><small>spent + still needed / ${cash(p.budget)} budget</small><div class="bar"><i style="width:${Math.min(100, (t.total / p.budget) * 100)}%"></i></div><p>${cash(Math.abs(p.budget - t.total))} ${t.total > p.budget ? "over budget" : "remaining"}</p><small>Full packs counted. ${cash(t.spent)} purchased.</small><small>Price estimates are labelled; check retailer packs.</small>${t.total > p.budget ? '<span class="badge warn">Review quantities or swap meals</span>' : ""}</article></div>${actionCenter(plan)}${dailyCard(state, localDay(), true)}<section class="section"><div class="section-head"><div><p class="eyebrow">TODAY'S MENU</p><h2>Four small moments to eat well.</h2></div><button class="link" data-action="nav" data-screen="plan">Full week →</button></div>${items.length ? `<div class="meal-grid">${items.map(mealCard).join("")}</div>` : empty("No meals for today", "Open Plan to create a week covering today.")}</section><section class="section grid2"><article class="card"><p class="eyebrow">YOUR KITCHEN FIRST</p><h2>Use what you have.</h2>${
     expiring.length
       ? expiring
           .slice(0, 3)
