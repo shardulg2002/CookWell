@@ -47,6 +47,32 @@ function setup(overrides = {}) {
   applyAction(s, "profile", { ...profile, ...overrides });
   return s;
 }
+test("equipment metadata validates and survives older profile updates", () => {
+  const input = {
+    ...profile,
+    equipment: [...profile.equipment, "pressureCooker", "blender"],
+    hobType: "induction",
+    hobScale: "1-9",
+    hobModel: "CDA",
+    pressureCookerModel: "Model to verify",
+    pressureCookerLitres: "6",
+  };
+  const p = profileInput(input);
+  assert.equal(p.pressureCookerLitres, 6);
+  assert.ok(p.equipment.includes("pressureCooker"));
+  assert.throws(() => profileInput({ ...input, hobScale: "1-20" }));
+  assert.throws(() =>
+    profileInput({ ...input, pressureCookerLitres: "invalid" }),
+  );
+  const s = freshState();
+  s.profile = p;
+  s.plans = [{ start: "2020-01-01", meals: [] }];
+  applyAction(s, "profile", { ...profile, equipment: p.equipment });
+  assert.equal(s.profile.hobType, "induction");
+  assert.equal(s.profile.hobScale, "1-9");
+  assert.equal(s.profile.hobModel, "CDA");
+  assert.equal(s.profile.pressureCookerLitres, 6);
+});
 test("onboarding creates 28 real meal slots without fabricated health/stock", () => {
   const s = setup();
   assert.equal(s.plans[0].meals.length, 28);

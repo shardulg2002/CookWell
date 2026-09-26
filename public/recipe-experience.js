@@ -3,6 +3,7 @@ import { instructionList } from "./cooking.js";
 import { ratingButtons } from "./preferences.js";
 import { recipeMedia } from "./recipe-media.js";
 import { dayKey } from "./metrics.js";
+import { nutritionEvidence } from "./nutrition-evidence.js";
 
 const keys = ["kcal", "protein", "carbs", "fat", "fibre", "salt"];
 const round = (n) => Math.round(n * 10) / 10;
@@ -102,13 +103,14 @@ export function recipeExperience(
   const macros = n
     ? `<div class="recipe-macros">${keys.map((k) => `<div><strong>${Number.isFinite(n[k]) ? round(n[k]) : "—"}</strong><small>${k === "kcal" ? "kcal" : `${k} · g`}</small></div>`).join("")}</div>`
     : '<p class="notice">Nutrition is not available for this recorded meal.</p>';
-  const ingredients = r.ingredients
-    .map(
-      (i) =>
-        `<div class="ingredient"><strong>${esc(i.quantity)} ${esc(i.unit)}</strong><div>${esc(i.name)}<small class="source">${esc(i.nutritionSource)}</small></div></div>`,
-    )
-    .join("");
-  const steps = `<ol class="step-list">${r.steps.map((st) => `<li><h3>${esc(st.title)}</h3>${instructionList(st.text)}</li>`).join("")}</ol>`;
+  const ingredients =
+    r.ingredients
+      .map(
+        (i) =>
+          `<div class="ingredient"><strong>${esc(i.quantity)} ${esc(i.unit)}</strong><div>${esc(i.name)}<small class="source">${esc(i.nutritionSource)}</small></div></div>`,
+      )
+      .join("") + nutritionEvidence(r, prepared || eaten, esc);
+  const steps = `${(r.cookingNotes || []).map((note) => `<p class="notice">${esc(note)}</p>`).join("")}<ol class="step-list">${r.steps.map((st) => `<li><h3>${esc(st.title)}</h3>${instructionList(st.text)}</li>`).join("")}</ol>`;
   const recipeDetails = `<div class="recipe-tabs" role="tablist" aria-label="Recipe details"><button id="ingredients-tab" role="tab" aria-controls="ingredients-panel" aria-selected="true" data-action="recipe-tab" data-id="ingredients">Ingredients</button><button id="instructions-tab" role="tab" aria-controls="instructions-panel" aria-selected="false" data-action="recipe-tab" data-id="instructions">Instructions</button></div><section id="ingredients-panel" role="tabpanel" aria-labelledby="ingredients-tab"><p class="hint section">${planned && !prepared ? `For the whole ${portions}-portion batch.` : "Reference recipe quantities."} Weigh ingredients raw, dry or drained as named; include oil and sauces. Nutrition remains an estimate and depends on the pack you use.</p>${ingredients}</section><section id="instructions-panel" role="tabpanel" aria-labelledby="instructions-tab" hidden>${steps}</section>`;
   const serving =
     prepared && planned && !stale && !missing

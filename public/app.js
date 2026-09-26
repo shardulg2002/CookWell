@@ -274,9 +274,25 @@ function renderOnboarding() {
      ([v, l]) =>
        `<label class="check-label"><input type="checkbox" name="equipment" value="${v}" ${p.equipment?.includes(v) ? "checked" : ""}>${l}</label>`,
    )
-   .join(
-     "",
-   )}</div>${field("Hob rings available at once", "hobCount", "number", p.hobCount || 1, 'min="1" max="4" step="1" required')}${select(
+   .join("")}</div>${select(
+   "Hob type",
+   "hobType",
+   [
+     ["unspecified", "Not specified"],
+     ["induction", "Induction"],
+     ["electric", "Electric ceramic / solid plate"],
+     ["gas", "Gas"],
+   ],
+   p.hobType || "unspecified",
+ )}${select(
+   "Hob power scale",
+   "hobScale",
+   [
+     ["generic", "Other / not sure"],
+     ["1-9", "Levels 1–9"],
+   ],
+   p.hobScale || "generic",
+ )}${field("Hob brand / model (optional)", "hobModel", "text", p.hobModel || "", 'maxlength="100"')}${field("Pressure cooker model (optional)", "pressureCookerModel", "text", p.pressureCookerModel || "", 'maxlength="100"')}${field("Pressure cooker capacity in litres (optional)", "pressureCookerLitres", "number", p.pressureCookerLitres || "", 'min="0.5" max="30" step="0.1"')}<p class="hint">1–9 induction guidance is approximate, not a calibrated temperature. Pressure-cooking recipes are not enabled until model-specific methods are verified.</p>${field("Hob rings available at once", "hobCount", "number", p.hobCount || 1, 'min="1" max="4" step="1" required')}${select(
    "Batch cooking interval",
    "cookEveryDays",
    [

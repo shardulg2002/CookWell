@@ -5,6 +5,7 @@ export const equipmentOptions = [
   ["microwave", "Microwave"],
   ["airFryer", "Air fryer"],
   ["riceCooker", "Rice cooker"],
+  ["pressureCooker", "Electric pressure cooker / multicooker"],
   ["slowCooker", "Slow cooker"],
   ["kettle", "Kettle"],
   ["toaster", "Toaster"],
@@ -25,6 +26,7 @@ export const equipmentGroups = [
       "microwave",
       "airFryer",
       "riceCooker",
+      "pressureCooker",
       "slowCooker",
       "kettle",
       "toaster",
@@ -37,7 +39,7 @@ export const equipmentGroups = [
   },
 ];
 export const equipmentNote =
-  "Choose the appliances you own. Each recipe still needs its listed equipment: air fryer, rice cooker and slow cooker methods are not available yet, so selecting one will not replace a hob or oven.";
+  "Choose the appliances you own. A blender can replace a shaker for cold protein drinks. Pressure cooker, air fryer, rice cooker and slow cooker methods are not available yet; selecting one will not replace a hob or oven. Pressure methods need a verified model, capacity and manual.";
 export function equipmentLabel(id) {
   return equipmentOptions.find(([value]) => value === id)?.[1] || id;
 }
