@@ -125,6 +125,7 @@ export function createShopExperience(ctx) {
   }
   function render() {
     const c = current();
+    const pantry = `<section class="card section"><h3>Already own groceries?</h3><p>Import a list without recording a purchase. Matched ingredients reduce shopping needs; unmatched masalas stay separate until their recipe use is checked.</p>${btn("Import cupboard list", "pantry-import", "", "outline")}${c.state?.pantryNotes?.length ? `<details class="section"><summary>Unmatched pantry items (${c.state.pantryNotes.length})</summary><p>Reference notes only: not used in meal plans, calorie totals or shopping coverage yet. Check labels before choosing a substitute.</p><ul>${c.state.pantryNotes.map((i) => `<li><strong>${esc(i.name)}</strong> · ${i.quantity == null ? "quantity unknown" : tidy(i.quantity) + " " + esc(i.unit)} · ${esc(i.location)}${i.expires ? " · use by " + esc(i.expires) : " · check pack date"}</li>`).join("")}</ul></details>` : ""}</section>`;
     return `<div class="shop-experience"><div class="shop-tabs" role="group" aria-label="Shopping and inventory">${[
       ["buy", "Buy"],
       ["kitchen", "My kitchen"],
@@ -133,7 +134,9 @@ export function createShopExperience(ctx) {
         ([id, label]) =>
           `<button type="button" data-action="shop-tab" data-id="${id}" aria-pressed="${tab === id}" class="${tab === id ? "active" : ""}">${label}</button>`,
       )
-      .join("")}</div>${tab === "buy" ? buyView(c) : kitchenView(c)}</div>`;
+      .join(
+        "",
+      )}</div>${tab === "buy" ? buyView(c) : pantry + kitchenView(c)}</div>`;
   }
   const field = (label, name, type, value, attrs = "") =>
     `<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;

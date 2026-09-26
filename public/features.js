@@ -8,8 +8,10 @@ import {
 import { reviewSummary } from "./review.js";
 import { parseReceipt, validBarcode } from "./imports.js";
 import { dayKey } from "./metrics.js";
+import { createPantryImport } from "./pantry-import.js";
 
 export function createFeatures(ctx) {
+  const pantryImport = createPantryImport(ctx);
   const {
     getState,
     chosenPlan,
@@ -204,6 +206,7 @@ export function createFeatures(ctx) {
     );
   }
   async function click(a, id, b) {
+    if (pantryImport.click(a)) return true;
     if (a === "eat") eat(id);
     else if (a === "prepare") prepare(id);
     else if (a === "batch") storage(id, b.dataset.op);
@@ -239,6 +242,7 @@ export function createFeatures(ctx) {
     return true;
   }
   async function submit(f, d) {
+    if (await pantryImport.submit(f, d)) return true;
     const id = f.dataset.id;
     if (f.id === "eat-form") await mutate("eat", { id, ...d });
     else if (f.id === "storage-form")
