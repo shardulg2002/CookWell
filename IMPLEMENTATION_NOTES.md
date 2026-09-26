@@ -1,4 +1,14 @@
-# Implementation notes — 11 September 2026
+# Implementation notes — 12 September 2026
+
+## Macro-aware planning follow-up
+
+- Added shared server/browser target calculations, transparent methodology, editable nutrition settings, daily plan comparisons and actual intake progress. The user's answers informed the configurable options; new accounts do not inherit an assumed kidney-health answer or fixed cuisine identity.
+- New weekly menus are assessed against all six nutrient targets and actual full-pack grocery requirements, including earlier-plan stock reservations and recorded purchases. Deterministic whole-day proposals avoid single-meal search traps; cooking-block refinements retain practical repeated portions. This is a heuristic, not a promise of perfect targets for every constraint set.
+- Rebalancing is previewed on a cloned account state before explicit confirmation. Stale revisions are rejected; cooked/eaten meals and inventory are not rewritten. Past dates remain historical, so their gaps may persist in a current-week report.
+- Added direct reversible likes/dislikes, expanded equipment choices and an at-a-glance shopping/cooking schedule linking to dated grocery lists. Fresh shake assemblies are shown separately from batch sessions, while dry powder is included in pack costs and stock accounting.
+- Added four protein/fibre-rich recipes plus a measured whey/water shake. Every new ingredient is used in scaled instructions. Whey has estimated label values/pricing and a milk allergen; mixing, freezing and yield guards prevent multi-day shake batches.
+- No medical target or glucose response is inferred from a finger-prick reading. The moderate-carbohydrate split and higher-protein option are editable planning suggestions; clinical diet review remains necessary. Restricted protein requires custom clinician advice and has no tolerance above the entered amount.
+- Existing-account adoption: Settings → Edit nutrition targets, save the chosen approach and answers, then Plan → Preview a better-balanced week. Saving targets alone intentionally does not replace an existing week.
 
 ## In-app action centre
 
@@ -23,11 +33,11 @@ The original prompt and PRODUCT_MVP.md remain the starting point. Current decisi
 
 ## Verification
 
-All 43 automated tests pass. They cover the original workflows plus custom batch yields, split-lot reservations, fractional eating/waste, cooked-weight conversion, legacy batches, review-driven draft regeneration, receipt parsing, barcode validation and confirmed purchase imports. New checks cover cooking cadence, automatic portion regrouping, expiry-aware trips, parallel grain/sauce tasks, attended-work blocking, oven reservations and deadlock-free walkthroughs for every recipe. Authenticated API journeys verify rhythm preferences, stock transactions and persistence across a server restart. Tests use isolated temporary account stores, not the user's live data.
+The automated suite covers the original workflows plus custom batch yields, split-lot reservations, fractional eating/waste, cooked-weight conversion, legacy batches, review-driven draft regeneration, receipt parsing, barcode validation and confirmed purchase imports. Checks cover cooking cadence, automatic portion regrouping, expiry-aware trips, parallel grain/sauce tasks, attended-work blocking, oven reservations and deadlock-free walkthroughs for every recipe. Macro regressions include a feasible £40 week with seven target-matching days, impossible budgets, external meals, hard dislikes, optional/daily shakes, label overrides and immutable cooked nutrition. Authenticated API journeys verify preview non-mutation, stale revisions, invalid targets, stock transactions and persistence across a server restart. Tests use isolated temporary account stores, not the user's live data.
 
 Browser checks verified batch-yield screens, the live grams-per-serving calculation, weekly review controls, receipt-text review, and on-device OCR of a fictional receipt image. A live Open Food Facts lookup succeeded for a public example barcode. Barcode-photo decoding, real supermarket receipts and iPhone camera formats still need broader device testing. The user's saved stock and health records were not modified by the browser checks.
 
-The PostgreSQL implementation and Vercel configuration exist, but no hosted database or deployment was available for verification. Use the deployment checklist in README before entering personal health data online.
+The owner has deployed the private beta to Vercel/Neon and reported completing the initial hosted account checks. Full hosted mutation, database backup/restore and device coverage remain separate acceptance work. Local browser checks of this upgrade verified the target live preview, expanded appliance list, current-week rebalance preview/cancellation and scheduled shopping links without adding food/health records or applying a replacement week.
 
 ## Completed follow-up features
 
@@ -51,4 +61,14 @@ Prioritise these after real kitchen testing, not all at once:
 2. Meal-linked glucose context: connect before/after readings with the actual meal and timing, without claiming that a single meal caused a change.
 3. A clinician-friendly progress export with units, timing and missing-data warnings.
 
-Photos of the actual tested recipes would be more useful than decorative stock imagery. This build has simple diagrams and linked technique help, not a complete photo/video recipe library.
+Photos of the actual tested recipes would be more useful than decorative stock imagery. This build has simple diagrams, linked technique help and three labelled original AI illustrations, not a complete tested photo/video recipe library.
+
+## Mise-inspired experience update — 26 September 2026
+
+- Today leads with a next action and breakfast/lunch/snack/dinner; actual diary totals are explicitly separate. The weekly plan uses seven day buttons and compact budget/target warnings. Detailed nutrition, sessions and review forms remain available on demand. A missing current week offers an explicit draft-from-today action, leaving saved weeks intact.
+- Recipe detail has ingredient/instruction tabs, exact full-batch quantities, per-serving estimated nutrition, active preparation time, and state-aware preparation or serving guidance. Cooked nutrition uses stored snapshots; expired/missing lots cannot offer an eat action. Cold assembly no longer gives reheating instructions. Three exact-match labelled AI illustrations are original project assets (RECIPE_ASSETS.md); no Mise or Tasty media was copied.
+- Swap previews compare measured servings, daily target gaps, full-pack grocery cost, changed batches, cooking dates and released leftovers. Previewing never commits the swap; confirmation still uses the normal optimistic-revision mutation. Purchases already made remain counted.
+- Buy and My kitchen are separate tabs. The multi-item purchase review starts with nothing selected and actual prices blank. Confirming validated quantities and paid totals atomically records purchases and increases inventory. Planned future-trip coverage is distinguished from actual stock. Receipt/barcode entry and individual price/stock controls remain available.
+- Browser checks covered desktop/390px mobile layouts, day selection, measured recipe steps, recipe tabs, labelled-image loading, swap preview/cancellation, purchase review/cancellation and inventory navigation. No fictional health/food/purchase entries or replacement week were saved into the user's browser account. Expired, frozen, historical and missing-lot states are covered by automated tests with synthetic data.
+- Existing target settings and plans remain as saved. To adopt different macro preferences, edit nutrition targets in Settings and review the plan's balance preview; saving settings alone does not replace an existing week.
+- Final verification for this update: 101 automated tests passed, production asset build passed, and local desktop/phone browser checks reported no console errors. Hosted write journeys were not performed against the owner's real account; API mutation journeys used isolated temporary accounts.

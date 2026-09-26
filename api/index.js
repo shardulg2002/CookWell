@@ -14,6 +14,7 @@ import {
   number,
 } from "../lib/domain.mjs";
 import { lookupProduct } from "../lib/product-lookup.mjs";
+import { previewSwap } from "../lib/swap-preview.mjs";
 const reject = (message, status = 400) => {
   throw Object.assign(new Error(message), { status });
 };
@@ -227,6 +228,25 @@ export default async function handler(req, res) {
           reject("Password is incorrect.", 401);
         cookie(res, "", "", true);
         return { account: null, result: { ok: true } };
+      }
+      if (action === "swapPreview") {
+        if (data.revision !== account.state.revision)
+          reject("Your data changed. Refresh before previewing a swap.", 409);
+        return { account, result: previewSwap(account.state, data) };
+      }
+      if (action === "rebalancePreview") {
+        if (data.revision !== account.state.revision)
+          reject(
+            "Your data changed. Refresh before previewing a new balance.",
+            409,
+          );
+        const draft = structuredClone(account.state);
+        applyAction(draft, "rebalancePlan", {
+          planId: data.planId,
+          confirmed: true,
+        });
+        const plan = viewState(draft).plans.find((p) => p.id === data.planId);
+        return { account, result: { plan, revision: account.state.revision } };
       }
       if (action !== "mutate") reject("Unknown endpoint.", 404);
       if (data.revision !== account.state.revision)

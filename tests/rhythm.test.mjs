@@ -9,6 +9,7 @@ import {
   getRecipe,
   shopping,
   priceOf,
+  profileInput,
 } from "../lib/domain.mjs";
 import { recipes, recipeMap } from "../lib/catalog.mjs";
 import {
@@ -65,7 +66,8 @@ function finish(flow, stage) {
   else advanceStage(flow, stage.id);
 }
 function flowFor(ids, hobs = 2) {
-  const s = setup();
+  const s = freshState();
+  s.profile = profileInput(profile);
   return createFlow(
     ids.map((id, i) => ({ mealId: "dish" + i, recipe: getRecipe(s, id, 3) })),
     { ...s.profile, hobCount: hobs },

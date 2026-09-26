@@ -1,4 +1,27 @@
 import { dayKey } from "./metrics.js";
+export function weeklySchedule(state, plan, { esc, btn, cash }) {
+  if (!plan) return "";
+  const trips = plan.shoppingTrips || [],
+    sessions = plan.sessions || [];
+  const dates = [
+    ...new Set([...trips, ...sessions].map((item) => item.date)),
+  ].sort();
+  const fresh = plan.meals.filter(
+    (m) =>
+      m.status === "planned" &&
+      !m.batchId &&
+      state.catalog.find((r) => r.id === m.recipeId)?.freshAssembly,
+  );
+  return `<section class="card section" aria-label="Weekly shopping and cooking schedule"><p class="eyebrow">YOUR WEEK AT A GLANCE</p><h2>Shop, then cook.</h2><div class="stack section">${
+    dates
+      .map((date) => {
+        const trip = trips.find((t) => t.date === date),
+          session = sessions.find((s) => s.date === date);
+        return `<div class="list-row"><strong>${esc(date)}</strong><div>${trip ? `<p>Shop · ${cash(trip.total)} remaining forecast</p>${btn("Open this shopping trip", "shop-day", `data-date="${esc(date)}"`, "outline")}` : ""}${session ? `<p>Cook ${session.dishes.length} dishes · ${session.dishes.reduce((n, d) => n + d.portions, 0)} servings</p>` : ""}</div></div>`;
+      })
+      .join("") || "<p>No shopping or cooking outstanding in this plan.</p>"
+  }</div>${fresh.length ? `<p class="hint section">${fresh.length} quick fresh assemblies (such as shakes) on ${[...new Set(fresh.map((m) => m.date))].map(esc).join(", ")}. Mix each just before eating; these are not batch cooking sessions.</p>` : ""}<p class="hint section">Shop before preparing these dishes. Later trips assume earlier purchases happen; check pack use-by dates. Detailed cooking sessions below include portions and multitasking.</p></section>`;
+}
 export function createRhythmUI({
   getState,
   chosenPlan,

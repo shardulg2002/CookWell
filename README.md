@@ -25,10 +25,14 @@ Tests cover onboarding, constraints, swaps, pack costs, stock transactions, left
 
 - Five-step onboarding: routine, budget, equipment, food exclusions, discovery, energy estimate, optional clinician-set glucose targets, and an editable weight milestone.
 - A seven-day plan with breakfast, lunch, snack and dinner; individual swaps, eating-out and skipped slots.
+- Editable daily calorie, protein, carbohydrate, fat, fibre and salt targets. Onboarding asks about protein restrictions, a balanced/moderate-carbohydrate/custom approach, and optional protein shakes. Settings shows the calculations, sources and practical planning ranges.
+- Macro-aware weekly planning evaluates full daily menus and cooking blocks against ingredient-derived nutrition, available stock and full-pack checkout cost. The Plan screen checks each day, displays unmet targets and budget gaps, and offers a non-destructive rebalance preview before applying changes to unprepared meals. Prepared food and historical nutrition snapshots are preserved.
+- The actual food diary compares recorded nutrients with daily targets. Empty or incomplete entries remain visibly unknown; the planned menu is never counted as food eaten.
+- Direct Like / Dislike / Clear preference controls on recipes. The latest dislike excludes a recipe from future generation and recommendations; likes influence ranking without becoming hard cuisine rules. Existing meals remain until explicitly changed or rebalanced.
 - Cooking cadence: batch every 2 or 3 days, or daily. New three-day plans use cooking days 1/4/7 and repeat meals within each block; same-recipe occurrences are combined automatically. One session can prepare breakfast, snacks and multiple main dishes. Existing weeks can be regrouped with **Set my rhythm**, preserving their recipes and completed food.
 - Focused cooking walkthroughs: one action at a time, exact batch quantities, recommended next tasks, independent timers and explicit food checks. Rice/pasta can cook while another task is prepared; attended pan work does not suggest multitasking. Hob counts and the single oven are reserved so they cannot be overbooked.
 - Weekly shopping or 2/3-day trips, with full-pack carryover and raw-stock expiry checked against the cooking date. Later-trip figures are forecasts until purchases are confirmed; verify pack use-by dates and freeze suitable ingredients when needed.
-- A structured 28-recipe library, quantity-derived nutrition, exact metric ingredients, short guided steps, timers, simple technique diagrams and a relevant external onion-chopping tutorial link.
+- A structured 33-recipe library, quantity-derived nutrition, exact metric ingredients, short guided steps, timers, simple technique diagrams and a relevant external onion-chopping tutorial link. Includes more protein/fibre-rich meals and a measured whey-and-water option, mixed fresh rather than stored as a multi-day batch.
 - Grocery quantities net of stock, full-pack costs, editable pack prices and nutrition. Three Tesco products have dated snapshots; other prices are explicitly estimates.
 - Purchase confirmation adds raw stock. Preparing a meal deducts raw stock once and creates measured portions. Eating records nutrition and consumes a portion.
 - Swapping a cooked meal leaves its food in the kitchen. Unallocated portions can be assigned to another meal; eligible unallocated frozen portions can carry into a future draft.
@@ -47,7 +51,7 @@ Dates for meals and the diary use Europe/London, including daylight saving. Calo
 
 ## Vercel deployment setup
 
-Deployment has **not** been performed or verified against a hosted database.
+The private beta is deployed at [CookWell](https://cook-well.vercel.app/) with Neon PostgreSQL. The owner reported completing the initial hosted account checks and deleting the disposable account. Automated mutation tests run against isolated local stores; that is not a substitute for PostgreSQL backup/restore or hosted end-to-end testing. The following checklist also applies when setting up a new deployment.
 
 1. Import this GitHub repository into Vercel with the repository root selected.
 2. Select **Other** as the framework. Install dependencies with `npm ci`, use `npm run build` as the build command, and `public` as the output directory. The build bundles the on-device OCR/barcode reader and copies its worker/language files. Generated `public/vendor/` files are intentionally not committed. `npm run dev` builds them automatically; run the build first if using `npm start`.
@@ -75,19 +79,27 @@ See [Vercel's Node.js runtime documentation](https://vercel.com/docs/functions/r
 - The action centre is shown when the app is opened. Push notifications and scheduled background reminders are not implemented.
 - Three-day batches require freezing later portions. Date-only plans conservatively earmark rice for freezing after cooking day and other food from day three. Actual cooking confirmation recalculates this split for today's date. A fridge-only setup uses at most two-day batches; a rice swap without a freezer may add a same-day cooking task. No cold storage means daily preparation.
 - Reheating/assembly still happens between batch sessions. Preparing several dishes can take substantially longer than 15–20 minutes; active-minute estimates are indicative sums, not a guaranteed schedule. A regrouped older week may contain more dishes than a newly generated batch-first plan.
-- Budget optimisation is a heuristic, not a guarantee. Tight budgets/constraints can reduce variety or leave a plan above budget. Review daily calories and shop totals before using a plan.
+- Nutrition and budget optimisation is a bounded heuristic, not a clinical prescription or a guarantee. Tight constraints can reduce variety or leave unmet targets / overspending, which are shown explicitly. A £40 synthetic 1,800-kcal moderate-carbohydrate test meets all seven daily planning ranges with three cooking sessions and one shopping trip; this does not establish that every profile or real checkout will do so. Finding a plan can take several seconds, especially for daily cooking or restrictive settings.
+- Automatic protein uses a general 0.75 g/kg reference until relevant advice is supplied; reported no restriction plus a weight-loss goal enables an editable 1.2 g/kg planning suggestion. Moderate carbohydrate uses 40% of energy as an opt-in planning choice, not a diabetes-specific prescription. Fat uses the remaining energy; fibre defaults to 30 g and salt to a maximum of 6 g. Restricted protein requires clinician-entered custom targets. No meal is labelled as guaranteed not to spike glucose.
+- Shakes are optional and cost the full powder pack when buying it, not just one scoop. The generic whey label and price are estimates. Milk allergens and shaker equipment are enforced. Air fryer, rice cooker and slow cooker choices are saved, but the current library does not yet offer their methods as substitutes for required hob/oven equipment.
 - Weekly drafts are created when the app is opened, not by a scheduled background job.
 - Before public launch: clinical/food-safety review, privacy and consent review, verified database backups and restore tests, stronger abuse protection, observability, accessible-device testing, broader recipe coverage and hosted end-to-end testing.
 
 ## Project map
 
+The current interface includes a compact Today view, a selectable seven-day plan, preview-before-confirm meal changes, measured batch recipes, and separate Buy / My kitchen tabs. Detailed health and nutrition data remains available without dominating the meal screens. Three original AI recipe illustrations are labelled; see `RECIPE_ASSETS.md` for the assets and prompts. No runtime image-generation or other paid AI service is enabled.
+
 - `public/`: responsive UI, shared calculations and offline shell
+- `public/*-experience.js`: focused meal, recipe, shopping and swap presentation
+- `lib/swap-preview.mjs`: read-only cost, nutrient and batch impact previews using the actual swap rules on a clone
 - `client/capture.js`, `scripts/build.mjs`: locally bundled photo readers; no receipt-photo upload or paid OCR service
 - `api/index.js`: authenticated HTTP endpoints
 - `lib/catalog.mjs`: structured recipes, ingredients and cooking instructions
 - `lib/domain.mjs`: planning, shopping, inventory and logging rules
 - `lib/batch-actions.mjs`, `lib/reviews.mjs`, `lib/purchase-import.mjs`: partial servings, learning feedback and confirmed purchase transactions
 - `lib/rhythm.mjs`: automatic batch grouping, storage allocation and scheduled shopping
+- `lib/nutrition-planner.mjs`, `lib/nutrition-seeds.mjs`: bounded macro/pack-cost search and seven-day reporting
+- `public/nutrition-targets.js`, `public/nutrition-ui.js`, `public/preferences.js`: shared target calculations, target/diary UI and reversible recipe preferences
 - `public/cook-flow.js`, `public/session-cooking.js`: dependency/equipment-aware guided cooking and concurrent timers
 - `lib/store.mjs`: PostgreSQL transactions and local development persistence
 - `tests/`: automated regression tests

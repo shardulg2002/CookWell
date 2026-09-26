@@ -1,4 +1,5 @@
 import { dailyIntake, dayKey, weightReference } from "./metrics.js";
+import { macroProgress } from "./nutrition-ui.js";
 const esc = (v) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -15,23 +16,10 @@ export function dailyCard(state, date = dayKey(), compact = false) {
  <div class="calorie-summary"><div><strong>${d.entries.length ? round(d.total.kcal) : "—"}</strong><span>kcal recorded</span></div><div><strong>${target}</strong><span>daily target</span></div><div><strong>${d.entries.length ? round(Math.abs(d.remaining)) : "—"}</strong><span>${d.remaining < 0 ? "above target" : "remaining"}</span></div></div>
  <div class="bar"><i style="width:${Math.min(100, (d.total.kcal / target) * 100)}%"></i></div><p class="hint">${round(d.plannedKcal)} kcal on the plan · ${d.eatenCount} planned meals eaten · ${d.extraCount} other entries. Unlogged food is missing, not zero intake. Exercise does not automatically increase this target.</p>
  <div class="row section"><button class="btn" data-action="food-log">+ Food or drink</button>${compact ? '<button class="link" data-action="nav" data-screen="progress">Open food diary →</button>' : ""}</div>
- ${
+ ${macroProgress(state, date, d)}${
    compact
      ? ""
-     : `<div class="nutrition">${Object.entries({
-         protein: "Protein",
-         carbs: "Carbs",
-         fat: "Fat",
-         fibre: "Fibre",
-         salt: "Salt",
-       })
-         .map(
-           ([k, label]) =>
-             `<div><strong>${Math.round(d.total[k] * 10) / 10} g</strong><small>${label}${d.incomplete ? " · partial" : ""}</small></div>`,
-         )
-         .join(
-           "",
-         )}</div>${d.incomplete ? '<p class="hint">Some entries have calories only. Missing nutrients are not assumed to be zero; nutrient totals are incomplete.</p>' : ""}<div class="section stack">${d.entries.map((e) => `<div class="list-row"><div><strong>${esc(e.name)}</strong><small class="source">${e.kind === "meal" ? "Measured recipe portion" : esc(e.quantity + " × " + (e.basis === "100g" ? "g" : "portion") + " · " + e.source)}</small></div><span>${round(e.nutrition.kcal)} kcal</span>${e.kind === "extra" ? `<button class="link" data-action="delete-food" data-id="${e.id}">Remove</button>` : ""}</div>`).join("") || '<p class="muted">Nothing recorded for this day yet.</p>'}</div>`
+     : `<div class="section stack">${d.entries.map((e) => `<div class="list-row"><div><strong>${esc(e.name)}</strong><small class="source">${e.kind === "meal" ? "Measured recipe portion" : esc(e.quantity + " × " + (e.basis === "100g" ? "g" : "portion") + " · " + e.source)}</small></div><span>${round(e.nutrition.kcal)} kcal</span>${e.kind === "extra" ? `<button class="link" data-action="delete-food" data-id="${e.id}">Remove</button>` : ""}</div>`).join("") || '<p class="muted">Nothing recorded for this day yet.</p>'}</div>`
  }
  </section>`;
 }

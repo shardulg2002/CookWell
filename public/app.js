@@ -2,12 +2,24 @@ import { dayKey, weightReference } from "./metrics.js";
 import { createFeatures } from "./features.js";
 import { createSessionCooking } from "./session-cooking.js";
 import { createRhythmUI } from "./rhythm-ui.js";
-import { yieldInfo, portionDescription } from "./portions.js";
+import { yieldInfo } from "./portions.js";
 import { reviewSummary } from "./review.js";
 import { parseReceipt, suggestIngredient, validBarcode } from "./imports.js";
 import { dailyCard, weightCard } from "./wellbeing.js";
-import { instructionList } from "./cooking.js";
-import { actionItems } from "./action-center.js";
+import { createMealExperience } from "./meal-experience.js";
+import { createShopExperience } from "./shop-experience.js";
+import { recipeExperience } from "./recipe-experience.js";
+import { recipeMedia } from "./recipe-media.js";
+import { renderSwapPreview } from "./swap-experience.js";
+import { createNutritionUI } from "./nutrition-ui.js";
+import { nutritionTargets } from "./nutrition-targets.js";
+import {
+  equipmentOptions,
+  equipmentLabel,
+  equipmentNote,
+  ratingButtons,
+  latestRecipeRating,
+} from "./preferences.js";
 const $ = (s) => document.querySelector(s);
 const esc = (v) =>
   String(v ?? "").replace(
@@ -192,6 +204,46 @@ const rhythmUI = createRhythmUI({
   select,
   cash,
 });
+const nutritionUI = createNutritionUI({
+  getState: () => state,
+  chosenPlan,
+  modal,
+  mutate,
+  esc,
+  btn,
+  field,
+  select,
+  cash,
+});
+const mealExperience = createMealExperience({
+  getState: () => state,
+  chosenPlan,
+  esc,
+  btn,
+  cash,
+  dateLabel,
+  render,
+  modal,
+  nutritionCards: (screen) => nutritionUI.cards(screen),
+  sessionCards: (screen) => rhythmUI.cards(screen),
+});
+const shopExperience = createShopExperience({
+  getState: () => state,
+  chosenPlan,
+  esc,
+  btn,
+  cash,
+  dateLabel,
+  modal,
+  mutate,
+  render,
+  getTripDate: () => shoppingTripDate,
+  setTripDate: (value) => {
+    shoppingTripDate = value;
+  },
+});
+let balancePreview = null,
+  swapPreview = null;
 function renderOnboarding() {
   const p = state.profile || {},
     t = p.targets || {};
@@ -217,14 +269,7 @@ function renderOnboarding() {
    ],
    p.activeLimit || 20,
  )}</div><div class="notice">Your food budget covers full grocery packs. Eating out is a separate choice for any meal.</div></section>
- <section data-step="1"><p class="eyebrow">02 / YOUR KITCHEN</p><h1>What can you cook with?</h1><p class="intro">Select only what you own. Include cold storage so we can plan leftovers safely.</p><div class="checks">${[
-   ["hob", "Hob / induction"],
-   ["oven", "Oven"],
-   ["microwave", "Microwave"],
-   ["fridge", "Fridge"],
-   ["freezer", "Freezer"],
-   ["scales", "Kitchen scales"],
- ]
+ <section data-step="1"><p class="eyebrow">02 / YOUR KITCHEN</p><h1>What can you cook with?</h1><p class="intro">${equipmentNote}</p><div class="checks">${equipmentOptions
    .map(
      ([v, l]) =>
        `<label class="check-label"><input type="checkbox" name="equipment" value="${v}" ${p.equipment?.includes(v) ? "checked" : ""}>${l}</label>`,
@@ -308,11 +353,45 @@ function renderOnboarding() {
    p.glucoseUnit || "mg/dL",
  )}<div></div>${field("Before meal — minimum", "beforeMin", "number", t.before?.min ?? "", 'step="0.1" min="0.1" max="1000"')}${field("Before meal — maximum", "beforeMax", "number", t.before?.max ?? "", 'step="0.1" min="0.1" max="1000"')}${field("After meal — minimum", "afterMin", "number", t.after?.min ?? "", 'step="0.1" min="0.1" max="1000"')}${field("After meal — maximum", "afterMax", "number", t.after?.max ?? "", 'step="0.1" min="0.1" max="1000"')}</div><div class="notice">Food and activity tracking support your care plan. CookWell does not recommend medication changes or meals to treat a high reading. Your actual readings and weight start empty—no demo health data.</div></section>
  <p class="error section" role="alert"></p><div class="onboard-footer"><button type="button" class="btn outline" data-action="onboard-back">Back</button><button type="button" class="btn" data-action="onboard-next">Continue →</button></div></form></main>`;
+  const ns = p.nutritionSettings || {};
+  $('[data-step="3"]').insertAdjacentHTML(
+    "beforeend",
+    `<fieldset class="section"><legend>Your nutrition targets</legend><div class="fields">${select(
+      "Nutrition approach",
+      "nutMode",
+      [
+        ["balanced", "Balanced"],
+        ["moderate", "Moderate carbohydrate"],
+        ["custom", "Custom daily gram targets"],
+      ],
+      ns.mode || "balanced",
+    )}${select(
+      "Kidney health / protein advice",
+      "proteinSafety",
+      [
+        ["unknown", "Not answered / unsure"],
+        ["none", "No known kidney disease or protein restriction"],
+        ["restricted", "Kidney disease or advised to limit protein"],
+      ],
+      ns.proteinSafety || "unknown",
+    )}${select(
+      "Protein shakes",
+      "shakes",
+      [
+        ["never", "Do not include"],
+        ["optional", "Optional, only when useful"],
+        ["daily", "Prefer one each day"],
+      ],
+      ns.shakes || "optional",
+    )}</div><p class="hint">Optional shakes need a shaker bottle and count the full powder pack in your grocery budget. All targets are editable. Restricted protein needs custom targets from your clinician.</p><details><summary>Custom targets (used only in Custom mode)</summary><div class="fields">${["protein", "carbs", "fat", "fibre", "salt"].map((k) => field(k + " (g/day)", "macro-" + k, "number", ns[k] ?? (k === "fibre" ? 30 : k === "salt" ? 6 : ""), 'min="0.1" max="800" step="0.1"')).join("")}</div></details><p id="macro-preview" class="notice section"></p></fieldset>`,
+  );
   updateEstimate();
 }
 function updateEstimate() {
   const f = $("#onboarding-form");
   if (!f) return;
+  for (const input of f.querySelectorAll('[name^="macro-"]'))
+    input.disabled = f.elements.nutMode.value !== "custom";
   const values = Object.fromEntries(new FormData(f));
   if (values.weight && values.height && values.age && values.equationSex) {
     const reference = weightReference(
@@ -336,6 +415,27 @@ function updateEstimate() {
     );
     $("#calorie-preview").textContent =
       `Suggested starting target: ${target} kcal/day. Includes a modest adjustment, not exercise calorie credits.`;
+    const n = nutritionTargets({
+      ...values,
+      calorieTarget: Number(values.calorieTarget) || target,
+      nutritionSettings: {
+        mode: values.nutMode,
+        proteinSafety: values.proteinSafety,
+        shakes: values.shakes,
+        ...(values.nutMode === "custom"
+          ? Object.fromEntries(
+              ["protein", "carbs", "fat", "fibre", "salt"].map((k) => [
+                k,
+                values["macro-" + k],
+              ]),
+            )
+          : {}),
+      },
+    });
+    if ($("#macro-preview"))
+      $("#macro-preview").textContent = n.ready
+        ? `Daily guide: ${n.values.protein} g protein · ${n.values.carbs} g carbs · ${n.values.fat} g fat · ${n.values.fibre} g fibre · up to ${n.values.salt} g salt. ${n.warnings.join(" ")}`
+        : n.warnings.join(" ");
   }
 }
 async function nextOnboarding() {
@@ -361,6 +461,19 @@ async function nextOnboarding() {
   d.equipment = new FormData(f).getAll("equipment");
   d.allergens = new FormData(f).getAll("allergens");
   d.avoid = new FormData(f).getAll("avoid");
+  d.nutritionSettings = {
+    mode: d.nutMode,
+    proteinSafety: d.proteinSafety,
+    shakes: d.shakes,
+    ...(d.nutMode === "custom"
+      ? Object.fromEntries(
+          ["protein", "carbs", "fat", "fibre", "salt"].map((k) => [
+            k,
+            d["macro-" + k],
+          ]),
+        )
+      : {}),
+  };
   d.targets = {
     before: { min: d.beforeMin, max: d.beforeMax },
     after: { min: d.afterMin, max: d.afterMax },
@@ -387,10 +500,9 @@ function showOnboardStep() {
 const navs = [
   ["today", "◒", "Today"],
   ["plan", "▦", "Plan"],
-  ["kitchen", "⌑", "Kitchen"],
+  ["kitchen", "⌑", "Shop"],
   ["recipes", "✳", "Recipes"],
   ["progress", "⌁", "Progress"],
-  ["settings", "⚙", "Settings"],
 ];
 function render() {
   if (!state) {
@@ -403,13 +515,35 @@ function render() {
   }
   const p = state.profile;
   $("#app").innerHTML =
-    `<div class="app-shell"><aside class="sidebar"><a class="brand" href="/"><img src="/icon.svg" alt="">CookWell</a><nav>${navs.map(([id, icon, label]) => `<button class="nav ${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav><div class="sidebar-foot"><strong>A little better, every day.</strong>One meal, one shop, one small step at a time.</div></aside><main class="main"><header class="topbar"><div><p class="eyebrow">${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p><h1>${{ today: `Welcome back, ${esc(p.name)}.`, plan: "A week that works for you.", kitchen: "A little less waste.", recipes: "Find your next favourite.", progress: "Your own pace. Your progress.", settings: "Make yourself at home." }[screen]}</h1></div><button class="profile" data-action="nav" data-screen="settings" aria-label="Settings">${esc(p.name.slice(0, 2).toUpperCase())}</button></header><div id="screen">${{ today: renderToday, plan: renderPlan, kitchen: renderKitchen, recipes: renderRecipes, progress: renderProgress, settings: renderSettings }[screen]()}</div></main><nav class="mobile-nav" aria-label="Main navigation">${navs.map(([id, icon, label]) => `<button class="${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav></div>`;
+    `<div class="app-shell"><aside class="sidebar"><a class="brand" href="/"><img src="/icon.svg" alt="">CookWell</a><nav>${navs.map(([id, icon, label]) => `<button class="nav ${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav><div class="sidebar-foot"><strong>A little better, every day.</strong>One meal, one shop, one small step at a time.</div></aside><main class="main"><header class="topbar"><div><p class="eyebrow">${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p><h1>${{ today: `Welcome back, ${esc(p.name)}.`, plan: "Your week, sorted.", kitchen: "Shop & kitchen.", recipes: "Find your next favourite.", progress: "Your progress.", settings: "Your preferences." }[screen]}</h1></div><button class="profile" data-action="nav" data-screen="settings" aria-label="Settings">${esc(p.name.slice(0, 2).toUpperCase())}</button></header><div id="screen">${{ today: renderToday, plan: renderPlan, kitchen: renderKitchen, recipes: renderRecipes, progress: renderProgress, settings: renderSettings }[screen]()}</div></main><nav class="mobile-nav" aria-label="Main navigation">${navs.map(([id, icon, label]) => `<button class="${screen === id ? "active" : ""}" data-action="nav" data-screen="${id}"><span class="symbol">${icon}</span>${label}</button>`).join("")}</nav></div>`;
   $("#screen").insertAdjacentHTML(
     "afterbegin",
-    features.tools(screen) +
-      sessionCooking.resumeButton() +
-      rhythmUI.cards(screen),
+    sessionCooking.resumeButton() +
+      (["today", "plan", "kitchen"].includes(screen)
+        ? ""
+        : nutritionUI.cards(screen) + rhythmUI.cards(screen)),
   );
+  if (!["today", "plan"].includes(screen))
+    $("#screen").insertAdjacentHTML("beforeend", features.tools(screen));
+  if (screen === "recipes") {
+    for (const button of document.querySelectorAll(
+      '.recipe [data-action="recipe"]',
+    ))
+      button
+        .closest(".recipe-body")
+        .insertAdjacentHTML(
+          "beforeend",
+          ratingButtons(state, button.dataset.id, esc),
+        );
+    const disliked = state.catalog.filter(
+      (r) => latestRecipeRating(state, r.id) === "dislike",
+    );
+    if (disliked.length)
+      $("#screen").insertAdjacentHTML(
+        "beforeend",
+        `<details class="section"><summary>Disliked recipes (${disliked.length}) · change a preference</summary>${disliked.map((r) => `<article class="card section"><h3>${esc(r.title)}</h3>${ratingButtons(state, r.id, esc)}</article>`).join("")}</details>`,
+      );
+  }
 }
 function totals(plan) {
   const rows =
@@ -424,107 +558,14 @@ function totals(plan) {
     remaining = rows.reduce((n, r) => n + r.cost, 0);
   return { spent, remaining, total: spent + remaining };
 }
-function mealCard(m) {
-  const r = catalog()[m.recipeId],
-    b = state.batches.find((b) => b.id === m.batchId);
-  return `<article class="meal"><p class="eyebrow">${slotNames[m.slot]}</p><h3>${m.status === "out" ? "Eating out" : m.status === "skipped" ? "Skipped" : esc(r.title)}</h3><small>${m.status === "eaten" ? "✓ Eaten" : m.parentId ? "Planned leftover" : b ? "Prepared" : `${r.active} min active`} · ${Math.round(r.nutrition.kcal * m.multiplier)} kcal planned</small><div class="actions"><button class="link" data-action="meal" data-id="${m.id}">View meal →</button>${m.status === "planned" ? `<button class="link" data-action="swap" data-id="${m.id}">Change</button>` : ""}</div></article>`;
-}
-function actionCenter(plan) {
-  const items = actionItems(state, plan, localDay());
-  if (!items.length) return "";
-  return `<section class="section action-center"><div class="section-head"><div><p class="eyebrow">TODAY'S ACTIONS</p><h2>What needs your attention.</h2></div><span class="badge">${items.length} item${items.length === 1 ? "" : "s"}</span></div><div class="action-list">${items
-    .map(
-      (item) =>
-        `<article class="action-item priority-${item.priority}"><span class="action-dot" aria-hidden="true"></span><div><h3>${esc(item.title)}</h3><small>${esc(item.detail)}</small></div><button class="link" data-action="${item.action}" ${item.target ? `data-id="${esc(item.target)}"` : ""} ${item.screen ? `data-screen="${esc(item.screen)}"` : ""}>${esc(item.label)} →</button></article>`,
-    )
-    .join("")}</div></section>`;
-}
 function renderToday() {
-  const plan = chosenPlan(),
-    items = plan?.meals.filter((m) => m.date === localDay()) || [],
-    next =
-      items.find((m) => m.status === "planned") ||
-      plan?.meals.find((m) => m.date >= localDay() && m.status === "planned"),
-    r = next ? catalog()[next.recipeId] : null,
-    t = totals(plan),
-    p = state.profile;
-  const expiring = state.inventory.filter(
-    (i) => i.quantity > 0 && i.expires && i.expires <= addDays(localDay(), 3),
-  );
-  return `<div class="hero"><article class="hero-main"><p class="eyebrow">${next ? slotNames[next.slot] + " · " + dateLabel(next.date) : "YOUR NEXT CHAPTER"}</p><h2>${r ? esc(r.title) : "Make space for a good week."}</h2><p>${next?.parentId ? "A portion from your batch. Check Kitchen before preparing something new." : "Your plan takes your kitchen, time and preferences into account."}</p><div class="row">${r ? `<span class="badge dark">${esc(r.cuisine)}</span><span class="badge dark">${r.active} min active</span>` : ""}</div><div class="row">${next ? btn("Open recipe →", "meal", `data-id="${next.id}"`, "light") : btn("Plan my week →", "nav", 'data-screen="plan"', "light")}</div><img src="/icon.svg" class="hero-art" alt=""></article><article class="card budget-card"><div class="row between"><p class="eyebrow">WEEKLY GROCERIES</p><button class="link" data-action="budget">Details →</button></div><p class="budget-amount">${cash(t.total)}</p><small>spent + still needed / ${cash(p.budget)} budget</small><div class="bar"><i style="width:${Math.min(100, (t.total / p.budget) * 100)}%"></i></div><p>${cash(Math.abs(p.budget - t.total))} ${t.total > p.budget ? "over budget" : "remaining"}</p><small>Full packs counted. ${cash(t.spent)} purchased.</small><small>Price estimates are labelled; check retailer packs.</small>${t.total > p.budget ? '<span class="badge warn">Review quantities or swap meals</span>' : ""}</article></div>${actionCenter(plan)}${dailyCard(state, localDay(), true)}<section class="section"><div class="section-head"><div><p class="eyebrow">TODAY'S MENU</p><h2>Four small moments to eat well.</h2></div><button class="link" data-action="nav" data-screen="plan">Full week →</button></div>${items.length ? `<div class="meal-grid">${items.map(mealCard).join("")}</div>` : empty("No meals for today", "Open Plan to create a week covering today.")}</section><section class="section grid2"><article class="card"><p class="eyebrow">YOUR KITCHEN FIRST</p><h2>Use what you have.</h2>${
-    expiring.length
-      ? expiring
-          .slice(0, 3)
-          .map(
-            (i) =>
-              `<div class="list-row"><div>${esc(state.ingredients.find((x) => x.id === i.ingredientId).name)}<small class="source">${i.expires < localDay() ? "Past recorded use-by" : "Use by " + dateLabel(i.expires)}</small></div><button class="link" data-action="stock" data-id="${i.id}">Update</button></div>`,
-          )
-          .join("")
-      : '<p class="muted section">No ingredients nearing their recorded expiry.</p>'
-  }<button class="link section" data-action="nav" data-screen="kitchen">Open kitchen →</button></article><article class="card" style="background:#eef0de"><p class="eyebrow">A QUICK CHECK-IN</p><h2>How are you doing?</h2><p class="muted section">Build a picture over time, one entry at a time.</p><div class="row section">${btn("+ Glucose", "log", 'data-type="glucose"', "light")}${btn("+ Weight", "log", 'data-type="weight"', "light")}${btn("+ Steps", "log", 'data-type="steps"', "light")}</div></article></section>`;
+  return mealExperience.today();
 }
 function renderPlan() {
-  const plan = chosenPlan();
-  if (!plan)
-    return empty(
-      "Your first week is waiting",
-      "Complete your profile to generate meals.",
-    );
-  const t = totals(plan);
-  return `<div class="week-toolbar"><select id="plan-select" aria-label="Select week">${state.plans.map((p) => `<option value="${p.id}" ${p.id === plan.id ? "selected" : ""}>${dateLabel(p.start)} – ${dateLabel(addDays(p.start, 6))} · ${p.status}</option>`).join("")}</select>${btn("Next week draft →", "next-week")}${btn("Shopping list", "nav", 'data-screen="kitchen"', "outline")}</div>${plan.status === "draft" ? `<div class="notice row between"><div><strong>Draft ready for review.</strong><p>Check quantities and use-by dates in Kitchen, then confirm this week.</p></div>${btn("Stock checked · confirm week", "activate", `data-id="${plan.id}"`)}</div>` : ""}<div class="row section-head"><span class="badge">28 meal slots</span><span class="badge">${state.profile.cooking === "batch" ? "Batch cooking" : "Fresh cooking"}</span><span class="badge ${t.total > state.profile.budget ? "warn" : ""}">${cash(t.total)} / ${cash(state.profile.budget)}</span></div><div class="week">${Array.from(
-    { length: 7 },
-    (_, i) => {
-      const date = addDays(plan.start, i),
-        ms = plan.meals.filter((m) => m.date === date);
-      return `<article class="day"><div><p class="eyebrow">${new Date(date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" })}</p><div class="day-date">${dateLabel(date)}</div></div>${ms
-        .map((m) => {
-          const r = catalog()[m.recipeId];
-          return `<div class="day-slot ${m.status}"><p class="eyebrow">${slotNames[m.slot]}</p><h3>${m.status === "out" ? "Eating out" : m.status === "skipped" ? "Skipped" : esc(r.title)}</h3><small>${m.status === "eaten" ? "✓ Eaten" : m.parentId ? "↳ Leftover portion" : r.cuisine} · ${Math.round(r.nutrition.kcal * m.multiplier)} kcal</small><div class="row"><button class="link" data-action="meal" data-id="${m.id}">View</button>${m.status === "planned" ? `<button class="link" data-action="swap" data-id="${m.id}">Change</button>` : ""}</div></div>`;
-        })
-        .join(
-          "",
-        )}<small>${Math.round(ms.filter((m) => !["out", "skipped"].includes(m.status)).reduce((n, m) => n + catalog()[m.recipeId].nutrition.kcal * m.multiplier, 0))} kcal planned</small></article>`;
-    },
-  ).join(
-    "",
-  )}</div><div class="notice section">Your energy target is ${state.profile.calorieTarget} kcal/day. Meals are portioned towards it; check daily totals. Eating-out meals are not included in nutrition totals. A new weekly draft appears when you open the app near the end of an active week.</div>`;
+  return mealExperience.plan();
 }
 function renderKitchen() {
-  const plan = chosenPlan(),
-    rows = plan?.shopping || [],
-    t = totals(plan),
-    byGroup = {};
-  for (const r of rows) (byGroup[r.group] ??= []).push(r);
-  return `<div class="section-head"><div><p class="eyebrow">${plan ? dateLabel(plan.start) + " – " + dateLabel(addDays(plan.start, 6)) : "YOUR KITCHEN"}</p><h2>From shopping bag to dinner.</h2><p>${cash(t.spent)} purchased · ${cash(t.remaining)} still needed</p></div>${btn("+ Add stock", "stock")}</div><div class="notice">Prices include full packs and edible quantities (e.g. 240 g drained chickpeas per can). Retailer snapshots have a source and date; other prices are estimates. Update the price or nutrition from the pack you buy.</div><div class="grid2 section"><section><h2>Shopping list</h2><label>Shopping trip<select id="shopping-trip">${options([["", "Whole week"], ...(plan?.shoppingTrips || []).map((t) => [t.date, t.date + " · through " + t.through + " · " + cash(t.total)])], shoppingTripDate)}</select></label>${shoppingTripDate ? '<p class="hint">This trip only. Later trips assume earlier purchases and ingredient use; review before buying.</p>' : ""}${Object.entries(
-    byGroup,
-  )
-    .map(
-      ([g, rs]) =>
-        `<div class="section"><p class="eyebrow">${esc(g)}</p>${rs.map((r) => `<article class="shop-line"><div><h3>${esc(r.name)}</h3><small>Need ${r.need} ${r.unit} · ${r.have} ${r.unit} available</small><small>${r.packs ? `${r.packs} × ${r.price.pack} ${r.unit} packs` : "Covered by your kitchen"}</small><div class="price-status">${esc(r.price.source)}${r.price.checkedAt ? " · " + r.price.checkedAt : ""}</div><div class="row"><button class="link" data-action="price" data-id="${r.id}">Edit price</button><button class="link" data-action="nutrition-edit" data-id="${r.id}">Pack nutrition</button>${r.price.url ? `<a class="link" href="${esc(r.price.url)}" target="_blank" rel="noreferrer">Source ↗</a>` : ""}</div></div><span class="cost">${cash(r.cost)}</span>${r.packs ? btn("Bought", "purchase", `data-id="${r.id}"`, "soft") : '<span class="badge">In stock</span>'}</article>`).join("")}</div>`,
-    )
-    .join(
-      "",
-    )}</section><section class="stack"><div><h2>My ingredients</h2><p class="muted">Actual quantities left. Update after waste or a stock check.</p></div>${
-    state.inventory
-      .filter((i) => i.quantity > 0)
-      .map((i) => {
-        const ing = state.ingredients.find((x) => x.id === i.ingredientId);
-        return `<article class="inventory-item"><h3>${esc(ing.name)}</h3><small>${round(i.quantity)} ${ing.unit} · ${i.location}</small><small>${i.expires ? (i.expires < localDay() ? "Past use-by · " : "Use by ") + i.expires : "No expiry recorded — check the pack"}</small><button class="link" data-action="stock" data-id="${i.id}">Adjust quantity / storage</button></article>`;
-      })
-      .join("") ||
-    empty(
-      "Start with your cupboards",
-      "Add ingredients you already have, or confirm a purchase.",
-    )
-  }<h2 class="section">Cooked portions</h2>${
-    state.batches
-      .filter((b) => b.remaining > 0)
-      .map(
-        (b) =>
-          `<article class="inventory-item"><h3>${esc(catalog()[b.recipeId].title)}</h3><small>${b.remaining} portions · ${b.location} · use by ${b.safeUntil ? new Date(b.safeUntil).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" }) + " UK" : b.expires}</small><small>${portionDescription(b)}</small><div class="row">${btn("Record batch weight", "batch-weight", `data-id="${b.id}"`, "outline")}${btn(b.location === "freezer" ? "Confirm defrosted" : "Freeze", "batch", `data-id="${b.id}" data-op="${b.location === "freezer" ? "thaw" : "freeze"}"`, "soft")}${btn("Use in plan", "use-batch-dialog", `data-id="${b.id}"`, "outline")}${btn("Record waste", "batch", `data-id="${b.id}" data-op="waste"`, "outline")}</div></article>`,
-      )
-      .join("") || '<p class="muted">Prepared meals will appear here.</p>'
-  }</section></div>`;
+  return shopExperience.render();
 }
 function renderRecipes() {
   return `<div class="section-head"><div><p class="eyebrow">EXPLORE & LEARN</p><h2>A library for your real kitchen.</h2><p>Recipes shown meet your saved equipment, diet and ingredient exclusions.</p></div></div><form id="search-form" class="row"><input class="search" style="margin:0;flex:1" name="query" placeholder="Something spicy using beans…" aria-label="Find a recipe">${btn("Find ideas", "search-recipes")}</form><p class="hint" style="margin-top:8px">Ingredient and cuisine search works free. No paid AI service is enabled.</p><div id="recommendations"></div><div class="recipes section">${state.catalog
@@ -533,7 +574,7 @@ function renderRecipes() {
     .join("")}</div>`;
 }
 function recipeCard(r) {
-  return `<article class="recipe"><div class="recipe-header"><span class="eyebrow" style="margin:0">${esc(r.cuisine)}</span><span class="recipe-icon">✳</span></div><div class="recipe-body"><h3>${esc(r.title)}</h3><small>${r.active} min active · ${Math.round(r.nutrition.kcal)} kcal / base serving</small><span class="hint">${round(r.nutrition.protein)} g protein · ${round(r.nutrition.fibre)} g fibre</span>${btn("View recipe →", "recipe", `data-id="${r.id}"`, "outline")}</div></article>`;
+  return `<article class="recipe">${recipeMedia(r)}<div class="recipe-cuisine">${esc(r.cuisine)}</div><div class="recipe-body"><h3>${esc(r.title)}</h3><small>${r.active} min active · ${Math.round(r.nutrition.kcal)} kcal / base serving</small><span class="hint">${round(r.nutrition.protein)} g protein · ${round(r.nutrition.fibre)} g fibre</span>${btn("View recipe →", "recipe", `data-id="${r.id}"`, "outline")}</div></article>`;
 }
 function lineChart(logs, unit) {
   if (logs.length < 2)
@@ -628,22 +669,31 @@ async function openRecipe(id, mult = 1, meal = null) {
   const r = await api(`recipe&id=${encodeURIComponent(id)}&multiplier=${mult}`);
   activeRecipe = r;
   activeMeal = meal;
-  const info = meal ? mealInfo(meal.id) : {},
-    b = info.batch;
+  const info = meal ? mealInfo(meal.id) : {};
   modal(
-    `<p class="eyebrow">${esc(r.cuisine)} · ${r.active} MIN ACTIVE</p><h2>${esc(r.title)}</h2><p class="intro">${meal ? "Quantities below cover this meal or its entire batch." : "Base serving; add through a meal swap to put this recipe on your plan."} All nutrition is estimated from ingredient quantities.</p>${meal ? features.batchSummary(meal) : ""}${nutrition(r.nutrition)}<p class="hint">${meal && mult !== meal.multiplier ? "Nutrition shown for the whole batch. Each planned portion has its own allocation." : "Nutrition shown for the displayed quantities."}</p><h3 class="section">Exactly what to use</h3>${r.ingredients.map((i) => `<div class="ingredient"><strong>${i.quantity} ${i.unit}</strong><div>${esc(i.name)}<small class="source">${esc(i.nutritionSource)}</small></div></div>`).join("")}<div class="row section">${btn("Start step-by-step cooking →", "guided")}</div><details><summary>Read all cooking steps</summary><ol class="step-list">${r.steps.map((st) => `<li><h3>${esc(st.title)}</h3>${instructionList(st.text)}</li>`).join("")}</ol></details><div class="row section">${btn("Guided cooking →", "guided")}${meal && !b && meal.status === "planned" ? btn("Mark prepared", "prepare", `data-id="${meal.id}"`, "outline") : ""}${meal && b && meal.status !== "eaten" ? btn("Mark this portion eaten", "eat", `data-id="${meal.id}"`) : ""}${btn("Rate this recipe", "feedback", `data-id="${r.id}"`, "outline")}</div>${meal ? `<div class="row section">${btn("Eating out instead", "meal-status", `data-id="${meal.id}" data-status="out"`, "soft")}${btn("Skip this meal", "meal-status", `data-id="${meal.id}" data-status="skipped"`, "soft")}${meal.status === "out" || meal.status === "skipped" ? btn("Restore meal", "meal-status", `data-id="${meal.id}" data-status="planned"`, "outline") : ""}</div>` : ""}`,
+    recipeExperience(
+      {
+        state,
+        recipe: r,
+        meal,
+        plan: info.p,
+        batchSummary: meal ? features.batchSummary(meal) : "",
+      },
+      { esc, btn, dateLabel },
+    ),
   );
 }
 async function openMeal(id) {
   const { m, p, batch } = mealInfo(id);
-  if (m.parentId && !batch) {
+  if (m.status === "planned" && m.parentId && !batch) {
     const parent = p.meals.find((x) => x.id === m.parentId);
     modal(
       `<p class="eyebrow">PLANNED LEFTOVER</p><h2>This portion comes from a batch.</h2><p class="intro">Prepare ${esc(catalog()[m.recipeId].title)} in the cooking session on ${dateLabel(parent.cookDate || parent.date)} first.</p>${btn("Open original batch →", "meal", `data-id="${parent.id}"`)}`,
     );
     return;
   }
-  const mult = batch ? m.multiplier : yieldInfo(p, m).multiplier;
+  const mult =
+    batch || m.status !== "planned" ? m.multiplier : yieldInfo(p, m).multiplier;
   await openRecipe(m.recipeId, mult, m);
 }
 function swapDialog(id) {
@@ -652,7 +702,7 @@ function swapDialog(id) {
     (x) => x.allowed && x.slots.includes(m.slot) && x.id !== r.id,
   );
   modal(
-    `<p class="eyebrow">CHANGE ${slotNames[m.slot]}</p><h2>What sounds good instead?</h2><p class="intro">Shopping quantities and remaining pack costs update when you choose. Completed meals stay intact.</p><div class="stack">${candidates.map((x) => `<div class="list-row"><div><h3>${esc(x.title)}</h3><small>${x.cuisine} · ${x.active} min active</small></div>${btn("Choose", "choose-swap", `data-id="${id}" data-recipe="${x.id}"`, "soft")}</div>`).join("") || empty("No other matching recipes", "Your ingredient exclusions remain in place.")}</div>`,
+    `<p class="eyebrow">CHANGE ${slotNames[m.slot]}</p><h2>What sounds good instead?</h2><p class="intro">Preview the serving size, daily nutrition, full-pack cost and cooking changes before you confirm. Completed meals stay intact.</p><div class="stack">${candidates.map((x) => `<div class="list-row"><div><h3>${esc(x.title)}</h3><small>${x.cuisine} · ${x.active} min active</small></div>${btn("Preview", "choose-swap", `data-id="${id}" data-recipe="${x.id}"`, "soft")}</div>`).join("") || empty("No other matching recipes", "Your ingredient exclusions remain in place.")}</div>`,
   );
 }
 function stockDialog(id) {
@@ -797,6 +847,83 @@ document.addEventListener("click", async (e) => {
     id = b.dataset.id;
   e.preventDefault();
   try {
+    if (b.dataset.planId) planId = b.dataset.planId;
+    if (mealExperience.click(a, id, b)) return;
+    if (await shopExperience.click(a, id, b)) return;
+    if (nutritionUI.click(a)) return;
+    if (a === "recipe-tab") {
+      for (const tab of document.querySelectorAll(".recipe-tabs [role=tab]"))
+        tab.setAttribute("aria-selected", String(tab.dataset.id === id));
+      for (const panel of document.querySelectorAll(
+        ".recipe-detail [role=tabpanel]",
+      ))
+        panel.hidden = panel.id !== id + "-panel";
+      return;
+    }
+    if (a === "shop-day") {
+      shoppingTripDate = b.dataset.date;
+      screen = "kitchen";
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (a === "recipe-rate") {
+      const inDialog = !!b.closest("dialog");
+      if (
+        await mutate(
+          "feedback",
+          { recipeId: id, rating: b.dataset.rating },
+          false,
+        )
+      ) {
+        if (inDialog && $("#dialog[open] .recipe-rating"))
+          $("#dialog .recipe-rating").outerHTML = ratingButtons(state, id, esc);
+        toast(
+          b.dataset.rating === "dislike"
+            ? "Excluded from future plans. Preview a rebalance to change remaining meals."
+            : "Recipe preference saved.",
+        );
+      }
+      return;
+    }
+    if (a === "rebalance-plan") {
+      const label = b.textContent;
+      b.disabled = true;
+      b.textContent = "Finding a better balance…";
+      let result;
+      try {
+        result = await api("rebalancePreview", {
+          planId: id,
+          revision: state.revision,
+        });
+      } finally {
+        b.disabled = false;
+        b.textContent = label;
+      }
+      balancePreview = result;
+      const old = state.plans.find((p) => p.id === id),
+        p = result.plan,
+        report = p.nutritionReport;
+      const changes = p.meals.filter((m) => {
+        const before = old.meals.find((x) => x.id === m.id);
+        return (
+          before.recipeId !== m.recipeId || before.multiplier !== m.multiplier
+        );
+      });
+      modal(
+        `<p class="eyebrow">REVIEW YOUR UPDATED WEEK</p><h2>${changes.length} meal portions adjusted</h2><p class="intro">${report.days.filter((d) => d.assessment.met).length} of 7 days within nutrition targets · ${cash(report.budget.total)} projected groceries / ${cash(report.budget.limit)} budget.</p>${report.warnings.map((w) => `<p class="notice">${esc(w)}</p>`).join("")}<details open><summary>See changed meals</summary><div class="stack section">${changes.map((m) => `<p>${m.date} · ${slotNames[m.slot]}<br><strong>${esc(catalog()[m.recipeId].title)}</strong> · ${round(catalog()[m.recipeId].nutrition.kcal * m.multiplier)} kcal · ${round(catalog()[m.recipeId].nutrition.protein * m.multiplier)} g protein</p>`).join("") || "<p>No changes found that improve the current balance.</p>"}</div></details><p class="hint">Applies only to unprepared meals from today onwards, including manual swaps. Purchases, cooked food and recorded meals remain saved. Shopping and cooking days recalculate after applying.</p>${btn("Apply this balance", "apply-rebalance", `data-id="${esc(id)}"`)}${btn("Keep current week", "close", "", "outline")}`,
+      );
+      return;
+    }
+    if (a === "apply-rebalance") {
+      if (!balancePreview || balancePreview.revision !== state.revision)
+        throw new Error("Your plan changed. Preview the balance again.");
+      if (await mutate("rebalancePlan", { planId: id, confirmed: true })) {
+        balancePreview = null;
+        toast("Week balanced. Review its nutrition and shopping checks.");
+      }
+      return;
+    }
     if (await sessionCooking.click(a, id, b)) return;
     if (rhythmUI.click(a, id, b)) return;
     if (a === "guided") {
@@ -811,6 +938,7 @@ document.addEventListener("click", async (e) => {
     if (a === "close") closeDialog();
     if (a === "nav") {
       screen = b.dataset.screen;
+      if (screen === "today") planId = null;
       render();
       window.scrollTo(0, 0);
     }
@@ -833,8 +961,35 @@ document.addEventListener("click", async (e) => {
     if (a === "recipe") await openRecipe(id);
     if (a === "swap") swapDialog(id);
     if (a === "choose-swap") {
-      if (await mutate("swap", { id, recipeId: b.dataset.recipe }))
-        toast("Meal changed. Shopping list recalculated.");
+      const label = b.textContent;
+      b.disabled = true;
+      b.textContent = "Checking impact…";
+      try {
+        swapPreview = await api("swapPreview", {
+          id,
+          recipeId: b.dataset.recipe,
+          revision: state.revision,
+        });
+        modal(renderSwapPreview(swapPreview, { esc, btn, cash, dateLabel }));
+      } finally {
+        b.disabled = false;
+        b.textContent = label;
+      }
+    }
+    if (a === "confirm-swap") {
+      if (
+        !swapPreview ||
+        swapPreview.revision !== state.revision ||
+        swapPreview.mealId !== id ||
+        swapPreview.recipeId !== b.dataset.recipe
+      )
+        throw new Error("Your plan changed. Preview this swap again.");
+      if (await mutate("swap", { id, recipeId: b.dataset.recipe })) {
+        swapPreview = null;
+        toast(
+          "Meal changed. Shopping, portions and cooking days recalculated.",
+        );
+      }
     }
     if (a === "meal-status") {
       if (await mutate("mealStatus", { id, status: b.dataset.status }))
@@ -846,6 +1001,24 @@ document.addEventListener("click", async (e) => {
         planId = state.plans.find((p) => p.start === start).id;
         render();
         toast("Draft created. Check Kitchen before confirming.");
+      }
+    }
+    if (a === "current-week-draft") {
+      const start = localDay();
+      const label = b.textContent;
+      b.disabled = true;
+      b.textContent = "Planning your week…";
+      try {
+        if (await mutate("generate", { start, draft: true })) {
+          planId = state.plans.find((p) => p.start === start).id;
+          shoppingTripDate = "";
+          screen = "plan";
+          render();
+          toast("New draft ready. Check your stock before confirming.");
+        }
+      } finally {
+        b.disabled = false;
+        b.textContent = label;
       }
     }
     if (a === "activate") {
@@ -948,6 +1121,8 @@ document.addEventListener("submit", async (e) => {
     if (sessionCooking.submit(f, d)) return;
     if (await rhythmUI.submit(f, d)) return;
     if (await features.submit(f, d)) return;
+    if (await nutritionUI.submit(f, d)) return;
+    if (await shopExperience.submit(f, d)) return;
     if (f.id === "auth-form") {
       const result = await api(authMode, d);
       sessionCooking.reset();
@@ -1000,7 +1175,9 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", (e) => {
+  nutritionUI.update(e.target.closest("form"));
   features.input(e.target);
+  shopExperience.input(e.target);
   features.capture(e.target).catch(showError);
   if (e.target.id === "intake-date") {
     intakeDate = e.target.value || localDay();
@@ -1020,7 +1197,9 @@ document.addEventListener("change", (e) => {
   if (e.target.closest("#onboarding-form")) updateEstimate();
 });
 document.addEventListener("input", (e) => {
+  nutritionUI.update(e.target.closest("form"));
   features.input(e.target);
+  shopExperience.input(e.target);
   if (e.target.closest("#onboarding-form")) updateEstimate();
 });
 

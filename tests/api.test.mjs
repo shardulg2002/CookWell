@@ -48,6 +48,16 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
       (await call("barcode", { code: "3017620422003", consent: true })).status,
       401,
     );
+    assert.equal(
+      (
+        await call("swapPreview", {
+          id: "private-meal",
+          recipeId: "eggs-toast",
+          revision: 0,
+        })
+      ).status,
+      401,
+    );
     const account = await call("register", {
         email: "new-features@example.test",
         password: "fictional-password-123",
@@ -104,6 +114,152 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
     assert.equal(state.profile.hobCount, 2);
     assert.equal(state.plans[0].sessions.length, 3);
     assert.equal(state.plans[0].shoppingTrips.length, 3);
+    await act("nutritionSettings", {
+      mode: "moderate",
+      proteinSafety: "none",
+      shakes: "never",
+    });
+    const beforePreview = JSON.stringify(state.plans[0].meals),
+      beforeRevision = state.revision;
+    const preview = await call(
+      "rebalancePreview",
+      { planId: state.plans[0].id, revision: state.revision },
+      cookie,
+    );
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.ok(preview.body.plan.nutritionReport.days.length === 7);
+    const afterPreview = (await call("state", null, cookie)).body.state;
+    assert.equal(
+      JSON.stringify(afterPreview.plans[0].meals),
+      beforePreview,
+      "Preview must not replace saved meals",
+    );
+    assert.equal(afterPreview.revision, beforeRevision);
+    await act("rebalancePlan", { planId: state.plans[0].id, confirmed: true });
+    assert.equal(
+      (
+        await call(
+          "rebalancePreview",
+          { planId: state.plans[0].id, revision: beforeRevision },
+          cookie,
+        )
+      ).status,
+      409,
+    );
+    const invalid = await call(
+      "mutate",
+      {
+        revision: state.revision,
+        action: "nutritionSettings",
+        data: {
+          mode: "custom",
+          proteinSafety: "none",
+          shakes: "never",
+          protein: 20,
+          carbs: 30,
+          fat: 10,
+        },
+      },
+      cookie,
+    );
+    assert.equal(invalid.status, 400);
+    const swapMeal = state.plans[0].meals.find(
+        (meal) => meal.status === "planned" && !meal.batchId,
+      ),
+      replacement = state.catalog.find(
+        (recipe) =>
+          recipe.allowed &&
+          recipe.slots.includes(swapMeal.slot) &&
+          recipe.id !== swapMeal.recipeId,
+      ),
+      swapRevision = state.revision,
+      savedBeforeSwap = structuredClone(state);
+    assert.ok(replacement, "The test week must have a compatible alternative");
+    const invalidSwapPreview = await call(
+      "swapPreview",
+      {
+        id: swapMeal.id,
+        recipeId: "recipe-that-does-not-exist",
+        revision: swapRevision,
+      },
+      cookie,
+    );
+    assert.equal(invalidSwapPreview.status, 400);
+    assert.equal(
+      (
+        await call(
+          "swapPreview",
+          { id: swapMeal.id, recipeId: replacement.id, revision: swapRevision },
+          cookie,
+          { Origin: "https://unrelated.test" },
+        )
+      ).status,
+      403,
+      "Preview requests retain the same cross-site protection as mutations",
+    );
+    const swapPreview = await call(
+      "swapPreview",
+      { id: swapMeal.id, recipeId: replacement.id, revision: swapRevision },
+      cookie,
+    );
+    assert.equal(swapPreview.status, 200, JSON.stringify(swapPreview.body));
+    assert.equal(swapPreview.body.revision, swapRevision);
+    assert.equal(swapPreview.body.after.meal.recipeId, replacement.id);
+    assert.ok(Number.isInteger(swapPreview.body.after.budget.total));
+    const savedAfterSwapPreview = (await call("state", null, cookie)).body
+      .state;
+    assert.equal(savedAfterSwapPreview.revision, swapRevision);
+    for (const key of [
+      "plans",
+      "inventory",
+      "batches",
+      "purchases",
+      "events",
+      "profile",
+      "logs",
+      "foodLogs",
+      "reviews",
+    ])
+      assert.deepEqual(
+        savedAfterSwapPreview[key],
+        savedBeforeSwap[key],
+        `Swap preview must not change ${key}`,
+      );
+    await act("swap", { id: swapMeal.id, recipeId: replacement.id });
+    const swappedPlan = state.plans.find(
+        (plan) => plan.id === swapPreview.body.planId,
+      ),
+      swappedMeal = swappedPlan.meals.find((meal) => meal.id === swapMeal.id),
+      swappedDay = swappedPlan.nutritionReport.days.find(
+        (day) => day.date === swapMeal.date,
+      );
+    assert.equal(state.revision, swapRevision + 1);
+    assert.equal(swappedMeal.recipeId, swapPreview.body.after.meal.recipeId);
+    assert.equal(
+      swappedMeal.multiplier,
+      swapPreview.body.after.meal.multiplier,
+    );
+    assert.deepEqual(swappedDay.totals, swapPreview.body.after.day.totals);
+    assert.deepEqual(
+      swappedDay.assessment,
+      swapPreview.body.after.day.assessment,
+    );
+    assert.deepEqual(swappedPlan.shopping, swapPreview.body.after.shopping);
+    assert.deepEqual(swappedPlan.sessions, swapPreview.body.after.sessions);
+    assert.equal(
+      swappedPlan.nutritionReport.budget.total,
+      swapPreview.body.after.budget.total,
+    );
+    assert.equal(
+      (
+        await call(
+          "swapPreview",
+          { id: swapMeal.id, recipeId: replacement.id, revision: swapRevision },
+          cookie,
+        )
+      ).status,
+      409,
+    );
     const p = state.plans[0],
       m = p.meals.find(
         (m) => !m.parentId && p.meals.some((c) => c.parentId === m.id),
@@ -165,6 +321,7 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
     );
     assert.equal(state.reviews.length, 1);
     assert.equal(state.imports.length, 1);
+    assert.equal(state.profile.nutritionSettings.mode, "moderate");
     assert.equal(
       state.purchases.reduce((n, p) => n + p.cost, 0),
       savedSpend,
@@ -254,6 +411,24 @@ test("persistent authenticated journey, isolation, stale writes and recovery", a
     });
     assert.equal(user2.body.state.logs.length, 0);
     assert.equal(user2.body.state.profile, null);
+    const otherAccountPreview = await call(
+      "swapPreview",
+      {
+        id: onboard.body.state.plans[0].meals[0].id,
+        recipeId: "eggs-toast",
+        revision: user2.body.state.revision,
+      },
+      user2.cookie,
+    );
+    assert.equal(
+      otherAccountPreview.status,
+      400,
+      "A signed-in account cannot preview another account's meal",
+    );
+    assert.equal(otherAccountPreview.body.after, undefined);
+    const isolatedAfterPreview = (await call("state", null, user2.cookie)).body
+      .state;
+    assert.deepEqual(isolatedAfterPreview, user2.body.state);
     await stop();
     await start();
     const persisted = await call("state", null, cookie);

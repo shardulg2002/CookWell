@@ -62,6 +62,8 @@ export function createFeatures(ctx) {
           " + ",
         )}.</p>${btn("Record / correct finished batch weight", "batch-weight", `data-id="${batch.id}"`, "outline")}</div>`;
     if (meal.status !== "planned") return "";
+    if (recipe(meal.recipeId).freshAssembly)
+      return '<p class="notice">Mix one measured serving when you want it. Powder stays in your cupboard; shakes are prepared fresh rather than with the multi-day cooking batch.</p>';
     const y = yieldInfo(p, meal),
       cal = recipe(meal.recipeId).nutrition.kcal * meal.multiplier;
     return `<div class="notice"><strong>1 cooking batch → ${y.portions} portion${y.portions === 1 ? "" : "s"}</strong><p>Cook once. Divide every component equally into ${y.portions} serving${y.portions === 1 ? "" : "s"}. One serving ≈ ${Math.round(cal)} kcal. ${y.group.length} serving(s) are in this plan; ${y.portions - y.group.length} extra serving(s) go into your kitchen.</p><p>Record the net finished food weight after cooking to calculate grams per serving. Water loss means raw weight is not finished serving weight.</p><p><strong>Automatically counted from your plan:</strong> ${y.group.map((m) => m.date + " " + m.slot).join(" · ")}. Swaps and skipped meals recalculate this batch.</p><details><summary>Optional: make extra freezer portions</summary><form id="batch-size-form" data-id="${meal.id}">${field("Total portions to make", "portions", "number", y.portions, `required min="${y.group.length}" max="20" step="1"`)}<button class="btn outline">Update batch & shopping quantities</button></form></details></div>`;
@@ -74,6 +76,12 @@ export function createFeatures(ctx) {
     }
     if (m.parentId) {
       openMeal(m.parentId);
+      return;
+    }
+    if (recipe(m.recipeId).freshAssembly) {
+      modal(
+        `<h2>Confirm your freshly mixed shake</h2><p class="intro">Use the measured powder and water shown in the recipe. Confirm mixing to deduct the powder from Kitchen, then record the amount you drank.</p><form id="prepare-form" data-id="${id}"><button class="btn">Confirm mixed</button></form>`,
+      );
       return;
     }
     const y = yieldInfo(p, m);
