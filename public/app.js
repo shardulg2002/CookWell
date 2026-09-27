@@ -1,5 +1,6 @@
 import { dayKey, weightReference } from "./metrics.js";
 import { createSetupUI } from "./setup-ui.js";
+import { hasMeatOrFish } from "./meal-mix.js";
 import { createFeatures } from "./features.js";
 import { createSessionCooking } from "./session-cooking.js";
 import { createRhythmUI } from "./rhythm-ui.js";
@@ -608,11 +609,12 @@ function renderKitchen() {
 function renderRecipes() {
   return `<div class="section-head"><div><p class="eyebrow">EXPLORE & LEARN</p><h2>A library for your real kitchen.</h2><p>Recipes shown meet your saved equipment, diet and ingredient exclusions.</p></div></div><form id="search-form" class="row"><input class="search" style="margin:0;flex:1" name="query" placeholder="Something spicy using beans…" aria-label="Find a recipe">${btn("Find ideas", "search-recipes")}</form><p class="hint" style="margin-top:8px">Ingredient and cuisine search works free. No paid AI service is enabled.</p><div id="recommendations"></div><div class="recipes section">${state.catalog
     .filter((r) => r.allowed)
+    .sort((a, b) => Number(hasMeatOrFish(b)) - Number(hasMeatOrFish(a)))
     .map(recipeCard)
     .join("")}</div>`;
 }
 function recipeCard(r) {
-  return `<article class="recipe">${recipeMedia(r)}<div class="recipe-cuisine">${esc(r.cuisine)}</div><div class="recipe-body"><h3>${esc(r.title)}</h3><small>${r.active} min active · ${Math.round(r.nutrition.kcal)} kcal / base serving</small><span class="hint">${round(r.nutrition.protein)} g protein · ${round(r.nutrition.fibre)} g fibre</span>${btn("View recipe →", "recipe", `data-id="${r.id}"`, "outline")}</div></article>`;
+  return `<article class="recipe">${recipeMedia(r)}<div class="recipe-cuisine">${esc(r.cuisine)} · ${hasMeatOrFish(r) ? "Meat / fish" : "Meat-free"}</div><div class="recipe-body"><h3>${esc(r.title)}</h3><small>${r.active} min active · ${Math.round(r.nutrition.kcal)} kcal / base serving</small><span class="hint">${round(r.nutrition.protein)} g protein · ${round(r.nutrition.fibre)} g fibre</span>${btn("View recipe →", "recipe", `data-id="${r.id}"`, "outline")}</div></article>`;
 }
 function lineChart(logs, unit) {
   if (logs.length < 2)

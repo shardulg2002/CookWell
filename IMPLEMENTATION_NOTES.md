@@ -1,5 +1,12 @@
 # Implementation notes — 12 September 2026
 
+## Main-meal mix correction — 27 September 2026
+
+- Added an explicit meat/fish frequency preference: unrestricted, about half, or most main meals with some meat-free variety. Omnivore/pescatarian planning can use it; vegetarian/vegan restrictions remain authoritative. Eggs and dairy do not count as meat/fish.
+- The nutrition optimiser previously had no meat/fish frequency objective and its shortlist strongly favoured cheap macro-matching menus. Explicit mix choices now retain mixed and meat/fish seed menus and score deviations from the requested range. Unmet preferences produce a warning alongside budget/nutrition warnings, not a guarantee of feasibility.
+- “Most” aims for 60–80% of planned lunches/dinners (9–12 of 14); “half” uses 40–60% rounded outward. These are preference ranges, not health recommendations. Saving changes future generation/rebalancing, not historical or already-prepared food.
+- Compatible meat/fish recipes appear first in the library, and cards distinguish meat/fish from meat-free recipes. This change uses existing structured recipes; it does not add unverified pressure-cooker methods or silently change health targets.
+
 ## Kitchen settings and safe plan dates — 27 September 2026
 
 - Settings now includes a dedicated equipment editor. Its narrow mutation preserves nutrition/health goals and stored food; unprepared batches regroup for storage capabilities, and incompatible future meals are listed in Settings and Plan rather than silently replaced.

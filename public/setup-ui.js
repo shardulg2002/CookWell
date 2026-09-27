@@ -1,5 +1,6 @@
 import { equipmentOptions, equipmentNote } from "./preferences.js";
 import { dayKey } from "./metrics.js";
+import { mealMixOptions } from "./meal-mix.js";
 export function createSetupUI({
   getState,
   chosenPlan,
@@ -13,11 +14,17 @@ export function createSetupUI({
 }) {
   return {
     card() {
-      return `<section class="card section"><h2>Kitchen & plan dates</h2><p>Update appliances without changing your health goals, or move an unused week safely.</p><div class="row">${btn("Edit equipment", "equipment-settings")}${btn("Plan dates", "plan-dates", "", "outline")}</div></section>`;
+      return `<section class="card section"><h2>Kitchen & meal preferences</h2><p>Update appliances, main-meal variety or plan dates without changing your health goals.</p><div class="row">${btn("Edit equipment", "equipment-settings")}${btn("Meat & fish frequency", "meal-mix-settings", "", "outline")}${btn("Plan dates", "plan-dates", "", "outline")}</div></section>`;
     },
     click(action) {
       const s = getState(),
         p = s.profile;
+      if (action === "meal-mix-settings") {
+        modal(
+          `<h2>What should your main meals look like?</h2><form id="meal-mix-form">${select("Meat / fish frequency", "mainMealMix", mealMixOptions, p.mainMealMix || "varied")}<p>Lunches and dinners count, including batch leftovers. “Most” aims for 9–12 of 14 main meals; “half” aims for 5–9. Eating-out/skipped slots reduce these counts. This is a preference, never an override of diet, allergens or dislikes. Your budget and nutrition gaps stay visible.</p><p>Saving changes future planning only. To update this week, use Plan → Preview a better-balanced week, then review and confirm. Cooked meals stay unchanged.</p><button class="btn">Save meal preference</button></form>`,
+        );
+        return true;
+      }
       if (action === "equipment-settings") {
         modal(
           `<h2>Your kitchen equipment</h2><p>${esc(equipmentNote)}</p><form id="equipment-settings-form"><div class="checks">${equipmentOptions.map(([id, label]) => `<label class="check-label"><input type="checkbox" name="equipment" value="${esc(id)}" ${p.equipment.includes(id) ? "checked" : ""}>${esc(label)}</label>`).join("")}</div>${field("Available hob rings", "hobCount", "number", p.hobCount || 1, 'required min="1" max="4" step="1"')}${select(
@@ -62,6 +69,10 @@ export function createSetupUI({
       return true;
     },
     async submit(form, data) {
+      if (form.id === "meal-mix-form") {
+        await mutate("mealMixSettings", { mainMealMix: data.mainMealMix });
+        return true;
+      }
       if (form.id === "equipment-settings-form") {
         await mutate("equipmentSettings", {
           ...data,
