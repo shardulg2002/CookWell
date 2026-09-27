@@ -1,5 +1,12 @@
 # Implementation notes — 12 September 2026
 
+## Kitchen settings and safe plan dates — 27 September 2026
+
+- Settings now includes a dedicated equipment editor. Its narrow mutation preserves nutrition/health goals and stored food; unprepared batches regroup for storage capabilities, and incompatible future meals are listed in Settings and Plan rather than silently replaced.
+- Plan dates offers either moving an unused week or creating a new non-overlapping dated draft. Moves reject purchases, prepared/eaten/skipped meals and reviews. Both choices require confirmation; past start dates and overlaps with other saved weeks are rejected. Moved plans retain meal identifiers, update cooking dates and return to draft for stock review.
+- The original first-week date is read-only during repeat onboarding. The backend rejects attempts to silently change it through the profile form and directs the user to Plan dates.
+- Added domain/UI regressions and extended the isolated authenticated purchase → cook → partial eating → next-week review/persistence journey to include equipment changes and safe/blocked date moves. No pantry expansion or changes to the owner's records were made.
+
 ## Macro-aware planning follow-up
 
 - Added shared server/browser target calculations, transparent methodology, editable nutrition settings, daily plan comparisons and actual intake progress. The user's answers informed the configurable options; new accounts do not inherit an assumed kidney-health answer or fixed cuisine identity.

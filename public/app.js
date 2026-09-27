@@ -1,4 +1,5 @@
 import { dayKey, weightReference } from "./metrics.js";
+import { createSetupUI } from "./setup-ui.js";
 import { createFeatures } from "./features.js";
 import { createSessionCooking } from "./session-cooking.js";
 import { createRhythmUI } from "./rhythm-ui.js";
@@ -165,7 +166,7 @@ const options = (values, current) =>
     )
     .join("");
 const field = (label, name, type = "text", value = "", attrs = "") =>
-  `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;
+  `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs} ${name === "startDate" && state?.plans?.length ? "readonly" : ""}>${name === "startDate" && state?.plans?.length ? '<span class="hint">Original start date. Change saved weeks through Settings → Plan dates; this form does not reschedule them.</span>' : ""}</label>`;
 const select = (label, name, values, current) =>
   `<label>${label}<select name="${name}">${options(values, current)}</select></label>`;
 const features = createFeatures({
@@ -182,6 +183,23 @@ const features = createFeatures({
   cash,
   toast,
   openMeal,
+});
+const setupUI = createSetupUI({
+  getState: () => state,
+  chosenPlan,
+  modal,
+  mutate,
+  esc,
+  field,
+  select,
+  btn,
+  onPlan: (id) => {
+    planId = id;
+    shoppingTripDate = "";
+    screen = "plan";
+    render();
+    toast("Draft ready. Check kitchen stock before confirming.");
+  },
 });
 const sessionCooking = createSessionCooking({
   getState: () => state,
@@ -541,6 +559,10 @@ function render() {
   );
   if (!["today", "plan"].includes(screen))
     $("#screen").insertAdjacentHTML("beforeend", features.tools(screen));
+  if (screen === "settings")
+    $("#screen").insertAdjacentHTML("afterbegin", setupUI.card());
+  if (["settings", "plan"].includes(screen))
+    $("#screen").insertAdjacentHTML("afterbegin", setupUI.warnings());
   if (screen === "recipes") {
     for (const button of document.querySelectorAll(
       '.recipe [data-action="recipe"]',
@@ -942,6 +964,7 @@ document.addEventListener("click", async (e) => {
     }
     if (await sessionCooking.click(a, id, b)) return;
     if (rhythmUI.click(a, id, b)) return;
+    if (setupUI.click(a)) return;
     if (a === "guided") {
       await sessionCooking.single(activeRecipe, activeMeal);
       return;
@@ -1136,6 +1159,7 @@ document.addEventListener("submit", async (e) => {
   try {
     if (sessionCooking.submit(f, d)) return;
     if (await rhythmUI.submit(f, d)) return;
+    if (await setupUI.submit(f, d)) return;
     if (await features.submit(f, d)) return;
     if (await nutritionUI.submit(f, d)) return;
     if (await shopExperience.submit(f, d)) return;

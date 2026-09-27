@@ -104,6 +104,37 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
         .status,
       400,
     );
+    const originalStart = state.plans[0].start,
+      originalId = state.plans[0].id;
+    const futureStart = new Date(
+      Date.parse(originalStart + "T12:00:00Z") + 7 * 86400000,
+    )
+      .toISOString()
+      .slice(0, 10);
+    await act("planDates", {
+      mode: "move",
+      planId: originalId,
+      start: futureStart,
+      confirmed: true,
+    });
+    assert.equal(state.plans[0].start, futureStart);
+    await act("planDates", {
+      mode: "move",
+      planId: originalId,
+      start: originalStart,
+      confirmed: true,
+    });
+    await act("activate", { id: originalId });
+    const oldTargets = structuredClone(state.profile.nutritionSettings);
+    await act("equipmentSettings", {
+      equipment: ["hob", "oven", "fridge", "freezer", "blender"],
+      hobCount: 2,
+      hobType: "induction",
+      hobScale: "1-9",
+      hobModel: "CDA",
+    });
+    assert.deepEqual(state.profile.nutritionSettings, oldTargets);
+    assert.equal(state.profile.hobModel, "CDA");
     await act("rhythm", {
       planId: state.plans[0].id,
       cooking: "batch",
@@ -298,6 +329,21 @@ test("new feature API journey persists imports, split lots, grams eaten and revi
     assert.equal(duplicate.status, 400);
     await act("cook", { id: m.id, cookedWeight: 2400 });
     const b = state.batches[0];
+    const usedMove = await call(
+      "mutate",
+      {
+        revision: state.revision,
+        action: "planDates",
+        data: {
+          mode: "move",
+          planId: p.id,
+          start: futureStart,
+          confirmed: true,
+        },
+      },
+      cookie,
+    );
+    assert.equal(usedMove.status, 400);
     await act("batch", { id: b.id, operation: "freeze", portions: 2 });
     await act("eat", { id: m.id, basis: "grams", amount: 200 });
     assert.equal(
