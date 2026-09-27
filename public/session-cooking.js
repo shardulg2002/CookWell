@@ -8,6 +8,7 @@ import {
   heldResources,
 } from "./cook-flow.js";
 import { stepAmounts, instructionList, techniqueVisual } from "./cooking.js";
+import { withPortionSteps } from "./portion-guide.js";
 export function createSessionCooking(ctx) {
   const { getState, chosenPlan, api, modal, esc, btn, toast, prepare } = ctx;
   let flow = null,
@@ -93,7 +94,7 @@ export function createSessionCooking(ctx) {
         ),
       })),
     );
-    flow = createFlow(dishes, getState().profile);
+    flow = createFlow(dishes.map(withPortionSteps), getState().profile);
     key = session.id;
     if (interval) clearInterval(interval);
     interval = setInterval(tick, 1000);

@@ -4,6 +4,7 @@ import { ratingButtons } from "./preferences.js";
 import { recipeMedia } from "./recipe-media.js";
 import { dayKey } from "./metrics.js";
 import { nutritionEvidence } from "./nutrition-evidence.js";
+import { portionGuide } from "./portion-guide.js";
 
 const keys = ["kcal", "protein", "carbs", "fat", "fibre", "salt"];
 const round = (n) => Math.round(n * 10) / 10;
@@ -115,7 +116,9 @@ export function recipeExperience(
   const serving =
     prepared && planned && !stale && !missing
       ? `<section class="serving-guide"><h3>${cold ? "Serve your measured portion" : "Reheat your measured portion"}</h3><ol class="instruction-list"><li>Take only the ${tidy(count)} portion${count === 1 ? "" : "s"} allocated to this meal${grams ? ` (${grams} g)` : "; divide each component evenly"}. Leave the other portions stored.</li><li>${r.freshAssembly ? "Drink the freshly mixed shake now. Do not keep it as a multi-day batch." : cold ? "Keep chilled food refrigerated until serving and follow its recorded safe-use time." : "If frozen, defrost fully in the fridge first. Reheat only once until steaming hot throughout; stir so the centre heats evenly."}</li><li>After eating, log the actual amount. Any uneaten fraction stays in Kitchen; record waste there if it cannot be safely kept.</li></ol></section>`
-      : "";
+      : planned && !prepared && !r.freshAssembly
+        ? portionGuide(r, portions, esc)
+        : "";
   const activeTime = Number.isFinite(r.active)
     ? `<p class="hint">${prepared || eaten ? "Original recipe · " : ""}${esc(r.active)} min active</p>`
     : "";
